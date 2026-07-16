@@ -27,6 +27,8 @@
     .status.on { background: #dcfce7; color: #166534; }
     .status.off { background: #fee2e2; color: #991b1b; }
 
+    .hidden { display: none !important; } /* Added this missing class */
+
     .nav-container { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .week-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
     .week-label { font-weight: bold; font-size: 0.95rem; color: var(--accent); flex: 1; text-align: center; }
@@ -70,7 +72,6 @@
 
     ul { list-style: none; }
     li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-    li.hidden { display: none; }
     li.is-moved { opacity: 0.4; background: #f1f5f9; }
     li.is-moved .task-name { text-decoration: line-through; }
     li:last-child { border-bottom: none; }
@@ -98,8 +99,7 @@
     .na-card h2 { font-size: 0.9rem; color: var(--muted); border: none; margin-bottom: 5px; }
     .na-card li { color: var(--muted); font-size: 0.8rem; padding: 4px 0; border: none; }
 
-    .settings { display: none; padding-top: 10px; }
-    .settings.active { display: block; }
+    .settings { padding-top: 10px; }
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .set-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
   </style>
@@ -155,7 +155,7 @@
     <div id="board" class="board"></div>
   </div>
 
-  <div id="settingsView" class="settings">
+  <div id="settingsView" class="settings hidden">
     <div class="set-card">
       <h2>Reward Goal</h2>
       <div class="set-row">
@@ -325,32 +325,20 @@
 
     async function moveTaskToNextWeek(item, currentDay) {
       if (item.wasPushedFromPrev) return alert("Cannot move this task again!");
-
       const nextW = displayedWeek + 1;
       const nextSnap = await new Promise(resolve => {
         onValue(ref(db, "board/week" + nextW), resolve, { onlyOnce: true });
       });
       let nextState = nextSnap.val();
-
       if (!nextState) {
         const startToggle = item.assignee === "Amy" ? 1 : 0;
         nextState = generateWeek(nextW, startToggle);
       }
-
       const newId = item.taskId + "_moved_" + Date.now();
-      const movedItem = {
-        ...item,
-        id: newId,
-        done: false,
-        wasPushedFromPrev: true,
-        pushedFromWeek: displayedWeek
-      };
-
+      const movedItem = { ...item, id: newId, done: false, wasPushedFromPrev: true, pushedFromWeek: displayedWeek };
       if (!nextState.assignments[currentDay]) nextState.assignments[currentDay] = [];
       nextState.assignments[currentDay].push(movedItem);
-
       await set(ref(db, "board/week" + nextW), nextState);
-
       item.isMoved = true;
       item.movedToId = newId;
       item.done = false;
@@ -363,12 +351,10 @@
         onValue(ref(db, "board/week" + nextW), resolve, { onlyOnce: true });
       });
       let nextState = nextSnap.val();
-
       if (nextState && nextState.assignments[currentDay]) {
         nextState.assignments[currentDay] = nextState.assignments[currentDay].filter(x => x.id !== item.movedToId);
         await set(ref(db, "board/week" + nextW), nextState);
       }
-
       item.isMoved = false;
       item.movedToId = null;
       save();
@@ -479,7 +465,6 @@
 
           const tools = document.createElement("div");
           tools.className = "row-tools";
-
           if (item.isMoved) {
             const lbl = document.createElement("span");
             lbl.className = "moved-label";
@@ -508,7 +493,6 @@
               moveBtn.disabled = !!item.wasPushedFromPrev;
               moveBtn.addEventListener("click", () => moveTaskToNextWeek(item, day));
               tools.appendChild(moveBtn);
-
               const sel = document.createElement("select");
               DAYS.forEach(d => {
                 const opt = document.createElement("option");
@@ -527,11 +511,9 @@
               tools.appendChild(sel);
             }
           }
-
           li.appendChild(tools);
           ul.appendChild(li);
         });
-
         if (ul.querySelectorAll("li:not(.hidden)").length === 0 && currentFilter !== "All") return;
         card.appendChild(ul);
         board.appendChild(card);
@@ -550,20 +532,17 @@
     function renderNotDue() {
       const notDueItems = TASKS.filter(t => !appearsThisWeek(t, displayedWeek) && t.freq !== "daily");
       if (notDueItems.length === 0) return;
-
       const card = document.createElement("div");
       card.className = "na-card";
       const h = document.createElement("h2");
       h.textContent = "Not Due This Week";
       card.appendChild(h);
-
       const ul = document.createElement("ul");
       notDueItems.forEach(t => {
         const li = document.createElement("li");
         li.textContent = t.name + " (" + t.freq + ")";
         ul.appendChild(li);
       });
-
       card.appendChild(ul);
       board.appendChild(card);
     }
@@ -593,8 +572,14 @@
     }
 
     document.getElementById("viewToggle").addEventListener("click", () => {
-      document.getElementById("mainView").classList.toggle("hidden");
-      document.getElementById("settingsView").classList.toggle("active");
+      const isMainVisible = !document.getElementById("mainView").classList.contains("hidden");
+      if (isMainVisible) {
+        document.getElementById("mainView").classList.add("hidden");
+        document.getElementById("settingsView").classList.remove("hidden");
+      } else {
+        document.getElementById("mainView").classList.remove("hidden");
+        document.getElementById("settingsView").classList.add("hidden");
+      }
     });
 
     document.getElementById("prevWeek").addEventListener("click", () => {
