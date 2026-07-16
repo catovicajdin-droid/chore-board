@@ -192,7 +192,20 @@
     const DAYS = ["Ponedjeljak","Utorak","Srijeda","Cetvrtak","Petak","Subota","Nedjelja"];
     const ASSIGNEES = ["Amy","Aiden"];
     const LOCKED = { "d4": "Aiden" };
-    const POINTS = { daily: 1, weekly: 5, "2x weekly": 5, "3x weekly": 5, biweekly: 10, monthly: 15, quarterly: 20 };
+    const POINTS = {
+      "Dorucak": 2,
+      "Rucak": 3,
+      "Sudje": 2,
+      "Slaganje vesa": 2,
+      "Masina za ves/susilica": 3,
+      daily: 1,
+      weekly: 5,
+      "2x weekly": 5,
+      "3x weekly": 5,
+      biweekly: 10,
+      monthly: 15,
+      quarterly: 20
+    };
 
     const TASKS = [
       { id: "d1", name: "Sudje", freq: "daily" },
@@ -388,7 +401,7 @@
         const ul = document.createElement("ul");
         items.forEach(item => {
           if (item.done && !item.isMoved) {
-            const pts = POINTS[item.freq] || 0;
+            const pts = POINTS[item.name] || POINTS[item.freq] || 0;
             if (item.assignee === "Amy") amyPts += pts;
             else aidenPts += pts;
           }
