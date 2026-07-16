@@ -49,7 +49,7 @@
     .filter-btn.active.aiden { color: var(--aiden); }
 
     .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn) {
+    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn) {
       font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
       border: 1px solid var(--border); border-radius: 8px;
       background: var(--card); color: var(--text); cursor: pointer;
@@ -65,8 +65,8 @@
     ul { list-style: none; }
     li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
     li.hidden { display: none; }
-    li.is-pushed { opacity: 0.5; background: #f8fafc; }
-    li.is-pushed .task-name { text-decoration: line-through; }
+    li.is-moved { opacity: 0.4; background: #f1f5f9; }
+    li.is-moved .task-name { text-decoration: line-through; }
     li:last-child { border-bottom: none; }
     li.done .task-name { text-decoration: line-through; color: var(--muted); }
     .task-name { flex: 1; min-width: 120px; font-size: 0.9rem; }
@@ -84,8 +84,9 @@
     .pass-btn { font-size: 0.9rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #fde047; background: #fef9c3; cursor: pointer; }
     .pass-btn:disabled { opacity: 0.3; cursor: not-allowed; background: #f1f5f9; border-color: var(--border); }
     .push-btn { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
+    .undo-btn { font-size: 0.7rem; padding: 3px 6px; border-radius: 4px; border: 1px solid #f87171; background: #fee2e2; color: #991b1b; cursor: pointer; }
     .push-btn:disabled { display: none; }
-    .pushed-label { font-size: 0.7rem; color: #64748b; font-style: italic; }
+    .moved-label { font-size: 0.7rem; color: #64748b; font-weight: bold; }
 
     .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 10px; }
     .na-card h2 { font-size: 0.9rem; color: var(--muted); border: none; margin-bottom: 5px; }
@@ -285,35 +286,54 @@
 
     function save() { db.ref("board/week" + displayedWeek).set(state); }
 
-    async function pushToNextWeek(item, currentDay) {
-      if (item.wasPushedFromPrev) return alert("Cannot push this task again!");
+    async function moveTaskToNextWeek(item, currentDay) {
+      if (item.wasPushedFromPrev) return alert("Cannot move this task again!");
 
       const nextW = displayedWeek + 1;
       const nextSnap = await db.ref("board/week" + nextW).once("value");
       let nextState = nextSnap.val();
 
-      // Generate next week if it doesn't exist
       if (!nextState) {
-        let lastStartPerson = item.assignee; // Fallback
-        const startToggle = lastStartPerson === "Amy" ? 1 : 0;
+        const startToggle = item.assignee === "Amy" ? 1 : 0;
         nextState = generateWeek(nextW, startToggle);
       }
 
-      // Add task to next week on same day
-      const pushedItem = JSON.parse(JSON.stringify(item));
-      pushedItem.wasPushedFromPrev = true;
-      pushedItem.done = false;
-      pushedItem.id = item.id + "_pushed_" + Date.now();
+      // Generate a unique ID for the new instance
+      const newId = item.taskId + "_moved_" + Date.now();
+      const movedItem = {
+        ...item,
+        id: newId,
+        done: false,
+        wasPushedFromPrev: true,
+        pushedFromWeek: displayedWeek // track for undo
+      };
 
       if (!nextState.assignments[currentDay]) nextState.assignments[currentDay] = [];
-      nextState.assignments[currentDay].push(pushedItem);
+      nextState.assignments[currentDay].push(movedItem);
 
-      // Save next week
       await db.ref("board/week" + nextW).set(nextState);
 
-      // Mark current task as pushed
-      item.isPushed = true;
+      // Mark original as moved
+      item.isMoved = true;
+      item.movedToId = newId;
       item.done = false;
+      save();
+    }
+
+    async function undoMove(item, currentDay) {
+      const nextW = displayedWeek + 1;
+      const nextSnap = await db.ref("board/week" + nextW).once("value");
+      let nextState = nextSnap.val();
+
+      if (nextState && nextState.assignments[currentDay]) {
+        // Remove the instance from next week
+        nextState.assignments[currentDay] = nextState.assignments[currentDay].filter(x => x.id !== item.movedToId);
+        await db.ref("board/week" + nextW).set(nextState);
+      }
+
+      // Restore original
+      item.isMoved = false;
+      item.movedToId = null;
       save();
     }
 
@@ -340,38 +360,32 @@
 
         const ul = document.createElement("ul");
         items.forEach(item => {
-          if (item.done) totalPts += (POINTS[item.freq] || 0);
+          if (item.done && !item.isMoved) totalPts += (POINTS[item.freq] || 0);
           const li = document.createElement("li");
           if (currentFilter !== "All" && item.assignee !== currentFilter) li.classList.add("hidden");
           if (item.done) li.classList.add("done");
-          if (item.isPushed) li.classList.add("is-pushed");
+          if (item.isMoved) li.classList.add("is-moved");
 
           const cb = document.createElement("input");
           cb.type = "checkbox"; cb.checked = item.done;
-          cb.disabled = item.isPushed;
+          cb.disabled = item.isMoved;
           cb.addEventListener("change", () => { item.done = cb.checked; save(); });
           li.appendChild(cb);
 
           if (item.freq === "daily") {
             const pass = document.createElement("button");
             pass.className = "pass-btn"; pass.textContent = "→";
-
-            // Logic: Cannot pass if passed yesterday
             const prevDayIdx = dayIdx - 1;
             let wasPassedRecently = false;
             if (prevDayIdx >= 0) {
-              const prevDayItems = state.assignments[DAYS[prevDayIdx]];
-              const yesterdayTask = prevDayItems.find(x => x.taskId === item.taskId);
+              const yesterdayTask = state.assignments[DAYS[prevDayIdx]].find(x => x.taskId === item.taskId);
               if (yesterdayTask && yesterdayTask.passedToday) wasPassedRecently = true;
             }
-            // Note: Crossing week boundaries (Sunday to Monday) isn't tracked here for simplicity
-            // but can be added if you want to check the previous week's Sunday data.
-
-            pass.disabled = wasPassedRecently || item.isPushed;
+            pass.disabled = wasPassedRecently || item.isMoved;
             pass.addEventListener("click", () => {
               const me = item.assignee; const other = me === "Amy" ? "Aiden" : "Amy";
               item.assignee = other;
-              item.passedToday = true; // Mark as passed
+              item.passedToday = true;
               if (dayIdx < 6) {
                 const nextItem = state.assignments[DAYS[dayIdx+1]].find(x => x.taskId === item.taskId);
                 if (nextItem) nextItem.assignee = me;
@@ -398,7 +412,7 @@
           const badge = document.createElement("button");
           badge.className = "assignee " + item.assignee.toLowerCase() + (locked ? " locked" : "");
           badge.textContent = item.assignee + (locked ? " 🔒" : "");
-          if (!locked && !item.isPushed) {
+          if (!locked && !item.isMoved) {
             badge.addEventListener("click", () => { item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy"; save(); });
           }
 
@@ -408,10 +422,14 @@
           const tools = document.createElement("div");
           tools.className = "row-tools";
 
-          if (item.isPushed) {
-             const pushedLbl = document.createElement("span");
-             pushedLbl.className = "pushed-label"; pushedLbl.textContent = "Pushed to next week";
-             tools.appendChild(pushedLbl);
+          if (item.isMoved) {
+             const lbl = document.createElement("span");
+             lbl.className = "moved-label"; lbl.textContent = "MOVED ⏭";
+             tools.appendChild(lbl);
+             const undoBtn = document.createElement("button");
+             undoBtn.className = "undo-btn"; undoBtn.textContent = "Undo";
+             undoBtn.onclick = () => undoMove(item, day);
+             tools.appendChild(undoBtn);
           } else {
             if (!locked) {
               const star = document.createElement("button");
@@ -421,13 +439,11 @@
               tools.appendChild(star);
             }
             if (item.freq !== "daily") {
-              const pushBtn = document.createElement("button");
-              pushBtn.className = "push-btn"; pushBtn.textContent = "Push ⏭";
-              pushBtn.disabled = !!item.wasPushedFromPrev;
-              pushBtn.addEventListener("click", () => {
-                if (confirm("Push this task to next week? (Can only be done once)")) pushToNextWeek(item, day);
-              });
-              tools.appendChild(pushBtn);
+              const moveBtn = document.createElement("button");
+              moveBtn.className = "push-btn"; moveBtn.textContent = "Move ⏭";
+              moveBtn.disabled = !!item.wasPushedFromPrev;
+              moveBtn.addEventListener("click", () => moveTaskToNextWeek(item, day));
+              tools.appendChild(moveBtn);
 
               const sel = document.createElement("select");
               DAYS.forEach(d => {
@@ -501,10 +517,10 @@
       sv.classList.toggle("active"); mv.style.display = sv.classList.contains("active") ? "none" : "block";
     });
     document.getElementById("reassign").addEventListener("click", () => {
-      if (confirm("Reassign everything for this week?")) { state = generateWeek(displayedWeek); save(); }
+      if (confirm("Resetuj sve zadatke za ovu sedmicu?")) { state = generateWeek(displayedWeek); save(); }
     });
     document.getElementById("wildcardBtn").addEventListener("click", () => {
-      const name = prompt("Who lost the wildcard game? (Amy/Aiden)")?.trim();
+      const name = prompt("Ko je izgubio wildcard igru? (Amy/Aiden)")?.trim();
       if (!name) return;
       const f = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
       DAYS.forEach(d => state.assignments[d].forEach(i => { if (i.wildcard) i.assignee = f; }));
