@@ -33,11 +33,7 @@
       gap: 8px;
     }
     h1 { font-size: 1.3rem; }
-    .status {
-      font-size: 0.75rem;
-      padding: 4px 8px;
-      border-radius: 999px;
-    }
+    .status { font-size: 0.75rem; padding: 4px 8px; border-radius: 999px; }
     .status.on { background: #dcfce7; color: #166534; }
     .status.off { background: #fee2e2; color: #991b1b; }
     .legend { display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.85rem; flex-wrap: wrap; }
@@ -45,86 +41,60 @@
     .dot { width: 12px; height: 12px; border-radius: 50%; }
     .dot.amy { background: var(--amy); }
     .dot.aiden { background: var(--aiden); }
-    .controls {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-    }
+    .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
     button {
-      font-family: inherit;
-      font-size: 0.85rem;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--card);
-      color: var(--text);
-      cursor: pointer;
+      font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--card); color: var(--text); cursor: pointer;
     }
     button.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
     button.notif-on { background: #16a34a; color: #fff; border-color: #16a34a; }
     button.notif-off { background: #dc2626; color: #fff; border-color: #dc2626; }
     .board { display: grid; gap: 12px; }
     .day-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px;
     }
     .day-card h2 {
-      font-size: 1rem;
-      margin-bottom: 8px;
-      padding-bottom: 6px;
+      font-size: 1rem; margin-bottom: 8px; padding-bottom: 6px;
       border-bottom: 1px solid var(--border);
     }
     ul { list-style: none; }
     li {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-      flex-wrap: wrap;
+      display: flex; align-items: center; gap: 8px; padding: 8px 0;
+      border-bottom: 1px solid var(--border); flex-wrap: wrap;
     }
     li:last-child { border-bottom: none; }
     li.done .task-name { text-decoration: line-through; color: var(--muted); }
     .task-name { flex: 1; min-width: 120px; font-size: 0.9rem; }
     .assignee {
-      font-size: 0.75rem;
-      padding: 3px 8px;
-      border-radius: 999px;
-      color: #fff;
-      cursor: pointer;
-      white-space: nowrap;
+      font-size: 0.75rem; padding: 3px 8px; border-radius: 999px;
+      color: #fff; cursor: pointer; white-space: nowrap;
     }
     .assignee.amy { background: var(--amy); }
     .assignee.aiden { background: var(--aiden); }
     input[type="checkbox"] { width: 20px; height: 20px; accent-color: #4f46e5; }
     .freq-tag {
-      font-size: 0.65rem;
-      color: var(--muted);
-      background: var(--bg);
-      padding: 2px 6px;
-      border-radius: 4px;
+      font-size: 0.65rem; color: var(--muted); background: var(--bg);
+      padding: 2px 6px; border-radius: 4px;
     }
     .row-tools { display: flex; gap: 6px; align-items: center; width: 100%; }
     select {
-      font-family: inherit;
-      font-size: 0.7rem;
-      padding: 3px 4px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--card);
+      font-family: inherit; font-size: 0.7rem; padding: 3px 4px;
+      border: 1px solid var(--border); border-radius: 6px; background: var(--card);
     }
     .star-btn {
-      font-size: 0.9rem;
-      padding: 2px 6px;
-      background: none;
-      border: none;
-      cursor: pointer;
-      opacity: 0.35;
+      font-size: 0.9rem; padding: 2px 6px; background: none;
+      border: none; cursor: pointer; opacity: 0.3;
     }
     .star-btn.active { opacity: 1; }
+    .na-card {
+      background: #f1f5f9; border: 1px dashed var(--border);
+      border-radius: 12px; padding: 12px; margin-top: 4px;
+    }
+    .na-card h2 { font-size: 0.95rem; color: var(--muted); margin-bottom: 8px; }
+    .na-card li { color: var(--muted); font-size: 0.82rem; }
+    .na-next { font-size: 0.7rem; color: #94a3b8; }
   </style>
 </head>
 <body>
@@ -136,7 +106,7 @@
   <div class="legend">
     <span><span class="dot amy"></span> Amy</span>
     <span><span class="dot aiden"></span> Aiden</span>
-    <span>⭐ Wildcard (tap star to change)</span>
+    <span>⭐ Wildcard (tap star)</span>
   </div>
 
   <div class="controls">
@@ -168,12 +138,9 @@
 
     const DAYS = ["Ponedjeljak","Utorak","Srijeda","Cetvrtak","Petak","Subota","Nedjelja"];
     const ASSIGNEES = ["Amy","Aiden"];
+    const MONTHS = ["januar","februar","mart","april","maj","juni","juli","august","septembar","oktobar","novembar","decembar"];
 
-    // freq: daily | weekly | biweekly | monthly | quarterly
-    // times: how many times per week (for daily-ish multi tasks)
-    // days: default day indexes for multi-per-week tasks (0=Mon .. 6=Sun)
     const TASKS = [
-      // Daily
       { id: "d1", name: "Sudje", freq: "daily" },
       { id: "d2", name: "Dorucak", freq: "daily" },
       { id: "d3", name: "Rucak", freq: "daily" },
@@ -184,18 +151,14 @@
       { id: "d8", name: "Zatezanje stola/ugla i misc", freq: "daily" },
       { id: "d9", name: "Mijenjanje Cafkine vode", freq: "daily" },
       { id: "d10", name: "Punjenje elektronike", freq: "daily" },
-      // Multi per week (placed on specific days, moveable)
       { id: "m1", name: "Ribanje sporeta", freq: "weekly", days: [1,4] },
       { id: "m2", name: "Mini-grocery", freq: "weekly", days: [2,5] },
       { id: "m3", name: "Usisavanje", freq: "weekly", days: [3,6] },
       { id: "m4", name: "Bacanje smeca", freq: "weekly", days: [0,2,4] },
       { id: "m5", name: "Ciscenje wc-a (solja, umivaonik)", freq: "weekly", days: [1,3,5] },
-      // Weekly, once, weekend
       { id: "w1", name: "Zalijevanje cvijeca", freq: "weekly", days: [5] },
       { id: "w2", name: "WC generalka (tus, odvod, podovi)", freq: "weekly", days: [6] },
-      // Biweekly
       { id: "b1", name: "Mijenjanje posteljine", freq: "biweekly", days: [5] },
-      // Monthly
       { id: "mo1", name: "Pranje rerne", freq: "monthly", days: [5] },
       { id: "mo2", name: "Pranje prozora + store", freq: "monthly", days: [6] },
       { id: "mo3", name: "Pranje balkona (ljeti)", freq: "monthly", days: [5] },
@@ -205,7 +168,6 @@
       { id: "mo7", name: "Pranje auta", freq: "monthly", days: [5] },
       { id: "mo8", name: "Ciscenje frizidera", freq: "monthly", days: [6] },
       { id: "mo9", name: "Placanje racuna", freq: "monthly", days: [5] },
-      // Quarterly
       { id: "q1", name: "Ciscenje odvoda (umivaonik)", freq: "quarterly", days: [6] }
     ];
 
@@ -220,33 +182,48 @@
     const now = new Date();
     const currentWeek = getWeekNumber(now);
     const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    // Does a non-daily task appear this week?
+    function firstWeekOfMonth(year, month) {
+      return getWeekNumber(new Date(year, month, 1));
+    }
+
     function appearsThisWeek(t) {
       switch(t.freq) {
         case "weekly": return true;
         case "biweekly": return currentWeek % 2 === 0;
-        case "monthly": {
-          // show monthly tasks in the first full week of the month
-          const firstMon = new Date(now.getFullYear(), now.getMonth(), 1);
-          return getWeekNumber(firstMon) === currentWeek || (currentWeek === getWeekNumber(firstMon)+0);
-        }
-        case "quarterly": {
-          // show in first week of Jan, Apr, Jul, Oct
-          const isQuarterMonth = [0,3,6,9].includes(currentMonth);
-          const firstMon = new Date(now.getFullYear(), now.getMonth(), 1);
-          return isQuarterMonth && getWeekNumber(firstMon) === currentWeek;
-        }
+        case "monthly": return firstWeekOfMonth(currentYear, currentMonth) === currentWeek;
+        case "quarterly":
+          return [0,3,6,9].includes(currentMonth) && firstWeekOfMonth(currentYear, currentMonth) === currentWeek;
         default: return true;
       }
+    }
+
+    // Human-readable next-due estimate
+    function nextDue(t) {
+      if (t.freq === "biweekly") {
+        return currentWeek % 2 === 0 ? "ove sedmice" : "sljedece sedmice";
+      }
+      if (t.freq === "monthly") {
+        const fw = firstWeekOfMonth(currentYear, currentMonth);
+        if (currentWeek < fw) return "prva sedmica ovog mjeseca";
+        const nm = (currentMonth + 1) % 12;
+        return "prva sedmica u " + MONTHS[nm];
+      }
+      if (t.freq === "quarterly") {
+        const quarters = [0,3,6,9];
+        let nextQ = quarters.find(q => q > currentMonth);
+        if (nextQ === undefined) nextQ = 0;
+        return "prva sedmica u " + MONTHS[nextQ];
+      }
+      return "";
     }
 
     let state = null;
 
     db.ref("board/week" + currentWeek).on("value", (snap) => {
       statusEl.textContent = "Live";
-      statusEl.classList.remove("off");
-      statusEl.classList.add("on");
+      statusEl.classList.remove("off"); statusEl.classList.add("on");
       state = snap.val();
       if (!state) {
         state = generateWeek();
@@ -255,20 +232,12 @@
       render();
     }, () => {
       statusEl.textContent = "Offline";
-      statusEl.classList.remove("on");
-      statusEl.classList.add("off");
+      statusEl.classList.remove("on"); statusEl.classList.add("off");
     });
 
     function makeItem(t, uid, assignee) {
-      return {
-        id: uid,
-        taskId: t.id,
-        name: t.name,
-        freq: t.freq,
-        assignee: assignee,
-        done: false,
-        wildcard: false
-      };
+      return { id: uid, taskId: t.id, name: t.name, freq: t.freq,
+               assignee: assignee, done: false, wildcard: false };
     }
 
     function generateWeek() {
@@ -276,7 +245,6 @@
       DAYS.forEach(d => assignments[d] = []);
       let toggle = Math.random() < 0.5 ? 0 : 1;
 
-      // Daily tasks: every day, alternating for balance
       TASKS.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
           assignments[day].push(makeItem(t, t.id + "_" + day, ASSIGNEES[toggle]));
@@ -284,20 +252,17 @@
         });
       });
 
-      // Non-daily: place on their default day(s)
       TASKS.filter(t => t.freq !== "daily").forEach(t => {
         if (!appearsThisWeek(t)) return;
-        (t.days || [6]).forEach((di, idx) => {
-          const day = DAYS[di];
-          assignments[day].push(makeItem(t, t.id + "_" + di, ASSIGNEES[toggle]));
+        (t.days || [6]).forEach(di => {
+          assignments[DAYS[di]].push(makeItem(t, t.id + "_" + di, ASSIGNEES[toggle]));
           toggle = 1 - toggle;
         });
       });
 
-      // Wildcards: one from Amy's tasks, one from Aiden's (non-daily only)
+      // Wildcards: one from each person's pool, any task eligible
       const amyPool = [], aidenPool = [];
       DAYS.forEach(day => assignments[day].forEach(item => {
-        if (item.freq === "daily") return;
         if (item.assignee === "Amy") amyPool.push(item);
         else aidenPool.push(item);
       }));
@@ -362,17 +327,18 @@
           li.appendChild(nameWrap);
           li.appendChild(badge);
 
-          // Tools row for non-daily: wildcard star + day mover
+          // Tools row: star on ALL tasks; day-mover only for non-daily
+          const tools = document.createElement("div");
+          tools.className = "row-tools";
+
+          const star = document.createElement("button");
+          star.className = "star-btn" + (item.wildcard ? " active" : "");
+          star.textContent = "⭐";
+          star.title = "Toggle wildcard";
+          star.addEventListener("click", () => { item.wildcard = !item.wildcard; save(); });
+          tools.appendChild(star);
+
           if (item.freq !== "daily") {
-            const tools = document.createElement("div");
-            tools.className = "row-tools";
-
-            const star = document.createElement("button");
-            star.className = "star-btn" + (item.wildcard ? " active" : "");
-            star.textContent = "⭐";
-            star.title = "Toggle wildcard";
-            star.addEventListener("click", () => { item.wildcard = !item.wildcard; save(); });
-
             const sel = document.createElement("select");
             DAYS.forEach(d => {
               const opt = document.createElement("option");
@@ -381,17 +347,49 @@
               sel.appendChild(opt);
             });
             sel.addEventListener("change", () => moveItem(item, day, sel.value));
-
-            tools.appendChild(star);
             tools.appendChild(sel);
-            li.appendChild(tools);
           }
 
+          li.appendChild(tools);
           ul.appendChild(li);
         });
         card.appendChild(ul);
         board.appendChild(card);
       });
+
+      renderNotDue();
+    }
+
+    // Safety section: non-daily tasks not due this week
+    function renderNotDue() {
+      const notDue = TASKS.filter(t => t.freq !== "daily" && !appearsThisWeek(t));
+      if (notDue.length === 0) return;
+
+      const card = document.createElement("div");
+      card.className = "na-card";
+      const h2 = document.createElement("h2");
+      h2.textContent = "Nije za ovu sedmicu";
+      card.appendChild(h2);
+
+      const ul = document.createElement("ul");
+      notDue.forEach(t => {
+        const li = document.createElement("li");
+        const nameWrap = document.createElement("div");
+        nameWrap.className = "task-name";
+        nameWrap.textContent = t.name + " ";
+        const freqTag = document.createElement("span");
+        freqTag.className = "freq-tag";
+        freqTag.textContent = t.freq;
+        nameWrap.appendChild(freqTag);
+        const next = document.createElement("div");
+        next.className = "na-next";
+        next.textContent = "sljedeci put: " + nextDue(t);
+        nameWrap.appendChild(next);
+        li.appendChild(nameWrap);
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+      board.appendChild(card);
     }
 
     document.getElementById("reassign").addEventListener("click", () => {
@@ -412,40 +410,28 @@
       alert(name + " gets both wildcard tasks this week.");
     });
 
-    // Notification toggle with red/green state
     function setNotifState(on) {
       if (on) {
         notifyBtn.textContent = "Reminders On";
-        notifyBtn.classList.remove("notif-off");
-        notifyBtn.classList.add("notif-on");
+        notifyBtn.classList.remove("notif-off"); notifyBtn.classList.add("notif-on");
       } else {
         notifyBtn.textContent = "Enable Reminders";
-        notifyBtn.classList.remove("notif-on");
-        notifyBtn.classList.add("notif-off");
+        notifyBtn.classList.remove("notif-on"); notifyBtn.classList.add("notif-off");
       }
       localStorage.setItem("remindersOn", on ? "1" : "0");
     }
 
     notifyBtn.addEventListener("click", async () => {
       const currentlyOn = localStorage.getItem("remindersOn") === "1";
-      if (currentlyOn) {
-        setNotifState(false);
-        return;
-      }
-      if (!("Notification" in window)) {
-        alert("Notifications not supported on this device.");
-        return;
-      }
+      if (currentlyOn) { setNotifState(false); return; }
+      if (!("Notification" in window)) { alert("Notifications not supported."); return; }
       const perm = await Notification.requestPermission();
       if (perm === "granted") {
         setNotifState(true);
         new Notification("Chore Board", { body: "Reminders enabled!" });
-      } else {
-        setNotifState(false);
-      }
+      } else { setNotifState(false); }
     });
 
-    // Restore notification button state on load
     setNotifState(localStorage.getItem("remindersOn") === "1");
   </script>
 </body>
