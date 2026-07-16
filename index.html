@@ -8,13 +8,9 @@
   <title>Chore Board</title>
   <style>
     :root {
-      --amy: #ec4899;
-      --aiden: #3b82f6;
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --text: #1e293b;
-      --muted: #64748b;
-      --border: #e2e8f0;
+      --amy: #ec4899; --aiden: #3b82f6; --bg: #f8fafc;
+      --card: #ffffff; --text: #1e293b; --muted: #64748b;
+      --border: #e2e8f0; --accent: #4f46e5;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -24,99 +20,79 @@
     }
     header {
       display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 8px; flex-wrap: wrap; gap: 8px;
     }
-    h1 { font-size: 1.3rem; }
-    .status { font-size: 0.75rem; padding: 4px 8px; border-radius: 999px; }
+    h1 { font-size: 1.2rem; }
+    .status { font-size: 0.7rem; padding: 4px 8px; border-radius: 999px; }
     .status.on { background: #dcfce7; color: #166534; }
     .status.off { background: #fee2e2; color: #991b1b; }
-    .legend { display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.85rem; flex-wrap: wrap; }
-    .legend span { display: flex; align-items: center; gap: 4px; }
-    .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .dot.amy { background: var(--amy); }
-    .dot.aiden { background: var(--aiden); }
-    .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    button {
-      font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
-      border: 1px solid var(--border); border-radius: 8px;
-      background: var(--card); color: var(--text); cursor: pointer;
+
+    /* Week Navigation */
+    .week-nav {
+      display: flex; align-items: center; justify-content: center;
+      gap: 16px; background: var(--card); padding: 8px;
+      border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px;
     }
-    button.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
-    button.notif-on { background: #16a34a; color: #fff; border-color: #16a34a; }
-    button.notif-off { background: #dc2626; color: #fff; border-color: #dc2626; }
-    .board { display: grid; gap: 12px; }
-    .day-card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 12px;
-    }
-    .day-card h2 {
-      font-size: 1rem; margin-bottom: 8px; padding-bottom: 6px;
-      border-bottom: 1px solid var(--border);
-    }
-    ul { list-style: none; }
-    li {
-      display: flex; align-items: center; gap: 8px; padding: 8px 0;
-      border-bottom: 1px solid var(--border); flex-wrap: wrap;
-    }
-    li:last-child { border-bottom: none; }
-    li.done .task-name { text-decoration: line-through; color: var(--muted); }
-    .task-name { flex: 1; min-width: 120px; font-size: 0.9rem; }
-    .assignee {
-      font-size: 0.75rem; padding: 3px 8px; border-radius: 999px;
-      color: #fff; cursor: pointer; white-space: nowrap;
-    }
-    .assignee.amy { background: var(--amy); }
-    .assignee.aiden { background: var(--aiden); }
-    .assignee.locked { opacity: 0.7; cursor: not-allowed; }
-    input[type="checkbox"] { width: 20px; height: 20px; accent-color: #4f46e5; }
-    .freq-tag {
-      font-size: 0.65rem; color: var(--muted); background: var(--bg);
-      padding: 2px 6px; border-radius: 4px;
-    }
-    .time-tag {
-      font-size: 0.65rem; color: #4338ca; background: #eef2ff;
-      padding: 2px 6px; border-radius: 4px; margin-left: 4px;
-    }
-    .row-tools { display: flex; gap: 6px; align-items: center; width: 100%; }
-    select {
-      font-family: inherit; font-size: 0.7rem; padding: 3px 4px;
-      border: 1px solid var(--border); border-radius: 6px; background: var(--card);
-    }
-    .star-btn {
-      font-size: 0.9rem; padding: 2px 6px; background: none;
-      border: none; cursor: pointer; opacity: 0.3;
-    }
-    .star-btn.active { opacity: 1; }
-    .pass-btn {
-      font-size: 0.85rem; padding: 2px 8px; border-radius: 6px;
-      border: 1px solid var(--border); background: #fef9c3; cursor: pointer;
-    }
-    .na-card {
-      background: #f1f5f9; border: 1px dashed var(--border);
-      border-radius: 12px; padding: 12px; margin-top: 4px;
-    }
-    .na-card h2 { font-size: 0.95rem; color: var(--muted); margin-bottom: 8px; }
-    .na-card li { color: var(--muted); font-size: 0.82rem; }
-    .na-next { font-size: 0.7rem; color: #94a3b8; }
-    /* Settings view */
-    .settings { display: none; }
-    .settings.active { display: block; }
-    .board.hidden { display: none; }
-    .set-card {
+    .week-nav button { padding: 4px 12px; font-weight: bold; }
+    .week-label { font-weight: bold; font-size: 0.9rem; }
+
+    /* Points & Rewards */
+    .reward-bar {
       background: var(--card); border: 1px solid var(--border);
       border-radius: 12px; padding: 12px; margin-bottom: 12px;
     }
-    .set-card h2 { font-size: 1rem; margin-bottom: 8px; }
-    .set-row {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border);
+    .score-summary { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; }
+    .progress-bg { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; }
+    .progress-fill { background: #22c55e; height: 100%; transition: width 0.4s ease; width: 0%; }
+    .reward-status { font-size: 0.8rem; margin-top: 6px; font-weight: bold; color: #16a34a; display: none; }
+    .reward-status.active { display: block; }
+
+    .legend { display: flex; gap: 8px; margin-bottom: 12px; font-size: 0.75rem; flex-wrap: wrap; }
+    .legend span { display: flex; align-items: center; gap: 4px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot.amy { background: var(--amy); }
+    .dot.aiden { background: var(--aiden); }
+
+    .controls { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+    button {
+      font-family: inherit; font-size: 0.8rem; padding: 6px 10px;
+      border: 1px solid var(--border); border-radius: 8px;
+      background: var(--card); color: var(--text); cursor: pointer;
     }
-    .set-row:last-child { border-bottom: none; }
-    .set-name { font-size: 0.88rem; flex: 1; }
-    input[type="time"] {
-      font-family: inherit; font-size: 0.85rem; padding: 4px 6px;
-      border: 1px solid var(--border); border-radius: 6px;
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .board { display: grid; gap: 12px; }
+    .day-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px; position: relative;
     }
+    .day-card.today { border: 2px solid var(--accent); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1); }
+    .today-tag {
+      position: absolute; top: -10px; right: 10px; background: var(--accent);
+      color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 999px;
+    }
+    .day-card h2 { font-size: 0.95rem; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+    ul { list-style: none; }
+    li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    li.done .task-name { text-decoration: line-through; color: var(--muted); }
+    .task-name { flex: 1; min-width: 120px; font-size: 0.85rem; }
+    .assignee { font-size: 0.7rem; padding: 2px 6px; border-radius: 999px; color: #fff; cursor: pointer; }
+    .assignee.amy { background: var(--amy); }
+    .assignee.aiden { background: var(--aiden); }
+    .assignee.locked { opacity: 0.7; cursor: not-allowed; }
+    input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+    .freq-tag { font-size: 0.6rem; color: var(--muted); background: var(--bg); padding: 1px 4px; border-radius: 4px; }
+    .time-tag { font-size: 0.6rem; color: #4338ca; background: #eef2ff; padding: 1px 4px; border-radius: 4px; }
+    .pass-btn { font-size: 0.8rem; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); background: #fef9c3; }
+    .row-tools { display: flex; gap: 4px; align-items: center; width: 100%; margin-top: 4px; }
+    .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 4px; }
+    .na-card h2 { font-size: 0.9rem; color: var(--muted); }
+    .na-card li { font-size: 0.75rem; color: var(--muted); }
+
+    .settings { display: none; padding: 12px; background: var(--card); border-radius: 12px; border: 1px solid var(--border); }
+    .settings.active { display: block; }
+    .set-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
   </style>
 </head>
 <body>
@@ -124,22 +100,38 @@
     <h1>🧹 Chore Board</h1>
     <div style="display:flex;gap:8px;align-items:center;">
       <button id="viewToggle">⚙ Settings</button>
-      <span id="status" class="status off">Connecting...</span>
+      <span id="status" class="status off">...</span>
     </div>
   </header>
 
   <div id="mainView">
+    <!-- Week Navigation -->
+    <div class="week-nav">
+      <button id="prevWeek">◀</button>
+      <div class="week-label" id="weekLabel">Week --</div>
+      <button id="nextWeek">▶</button>
+    </div>
+
+    <!-- Reward Bar -->
+    <div class="reward-bar">
+      <div class="score-summary">
+        <span>Weekly Points: <strong id="totalPoints">0</strong></span>
+        <span>Goal: <strong id="goalText">100</strong></span>
+      </div>
+      <div class="progress-bg"><div id="progressBar" class="progress-fill"></div></div>
+      <div id="rewardMsg" class="reward-status">🎁 Reward Unlocked!</div>
+    </div>
+
     <div class="legend">
       <span><span class="dot amy"></span> Amy</span>
       <span><span class="dot aiden"></span> Aiden</span>
       <span>⭐ Wildcard</span>
-      <span>→ Pass to next day</span>
+      <span>→ Pass</span>
     </div>
 
     <div class="controls">
       <button id="reassign" class="primary">Reassign Week</button>
       <button id="wildcardBtn">Set Wildcard Loser</button>
-      <button id="notifyBtn" class="notif-off">Enable Reminders</button>
     </div>
 
     <div id="board" class="board"></div>
@@ -147,10 +139,12 @@
 
   <div id="settingsView" class="settings">
     <div class="set-card">
-      <h2>Preferred times</h2>
-      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:8px;">
-        Set once per task. Applies to every day. Leave blank for no time.
-      </p>
+      <h2 style="font-size: 1rem; margin-bottom: 12px;">Reward Settings</h2>
+      <div class="set-row">
+        <span>Point Goal</span>
+        <input type="number" id="goalInput" style="width:60px; padding:4px;" value="100">
+      </div>
+      <h2 style="font-size: 1rem; margin: 16px 0 8px;">Task Times</h2>
       <div id="settingsList"></div>
     </div>
   </div>
@@ -170,14 +164,14 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const statusEl = document.getElementById("status");
     const board = document.getElementById("board");
-    const notifyBtn = document.getElementById("notifyBtn");
 
     const DAYS = ["Ponedjeljak","Utorak","Srijeda","Cetvrtak","Petak","Subota","Nedjelja"];
     const ASSIGNEES = ["Amy","Aiden"];
-    const MONTHS = ["januar","februar","mart","april","maj","juni","juli","august","septembar","oktobar","novembar","decembar"];
-    const LOCKED = { "d4": "Aiden" }; // Tuta pinned to Aiden
+    const LOCKED = { "d4": "Aiden" };
+
+    // Point Values
+    const POINTS = { daily: 1, weekly: 5, biweekly: 10, monthly: 15, quarterly: 20 };
 
     const TASKS = [
       { id: "d1", name: "Sudje", freq: "daily" },
@@ -218,339 +212,121 @@
       return 1 + Math.round(((date - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
     }
 
-    const now = new Date();
-    const currentWeek = getWeekNumber(now);
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const realNow = new Date();
+    const realWeek = getWeekNumber(realNow);
+    const todayIndex = (realNow.getDay() + 6) % 7; // Mon=0
 
-    function firstWeekOfMonth(y, m) { return getWeekNumber(new Date(y, m, 1)); }
-
-    function appearsThisWeek(t) {
-      switch(t.freq) {
-        case "weekly": return true;
-        case "biweekly": return currentWeek % 2 === 0;
-        case "monthly": return firstWeekOfMonth(currentYear, currentMonth) === currentWeek;
-        case "quarterly":
-          return [0,3,6,9].includes(currentMonth) && firstWeekOfMonth(currentYear, currentMonth) === currentWeek;
-        default: return true;
-      }
-    }
-
-    function nextDue(t) {
-      if (t.freq === "biweekly") return currentWeek % 2 === 0 ? "ove sedmice" : "sljedece sedmice";
-      if (t.freq === "monthly") {
-        const fw = firstWeekOfMonth(currentYear, currentMonth);
-        if (currentWeek < fw) return "prva sedmica ovog mjeseca";
-        return "prva sedmica u " + MONTHS[(currentMonth + 1) % 12];
-      }
-      if (t.freq === "quarterly") {
-        const quarters = [0,3,6,9];
-        let nextQ = quarters.find(q => q > currentMonth);
-        if (nextQ === undefined) nextQ = 0;
-        return "prva sedmica u " + MONTHS[nextQ];
-      }
-      return "";
-    }
-
+    let displayedWeek = realWeek;
     let state = null;
-    let times = {}; // taskId -> "HH:MM"
+    let times = {};
+    let pointGoal = 100;
 
-    // Load global times (shared across phones)
-    db.ref("settings/times").on("value", (snap) => {
-      times = snap.val() || {};
+    // Load Settings
+    db.ref("settings").on("value", (snap) => {
+      const s = snap.val() || {};
+      times = s.times || {};
+      pointGoal = s.goal || 100;
+      document.getElementById("goalInput").value = pointGoal;
+      document.getElementById("goalText").textContent = pointGoal;
       if (state) render();
-      renderSettings();
     });
 
-    db.ref("board/week" + currentWeek).on("value", (snap) => {
-      statusEl.textContent = "Live";
-      statusEl.classList.remove("off"); statusEl.classList.add("on");
-      state = snap.val();
-      if (!state) {
-        state = generateWeek();
-        db.ref("board/week" + currentWeek).set(state);
-      }
-      render();
-    }, () => {
-      statusEl.textContent = "Offline";
-      statusEl.classList.remove("on"); statusEl.classList.add("off");
-    });
-
-    function makeItem(t, uid, assignee) {
-      return { id: uid, taskId: t.id, name: t.name, freq: t.freq,
-               assignee: assignee, done: false, wildcard: false };
+    function loadWeek(w) {
+      db.ref("board/week" + w).on("value", (snap) => {
+        state = snap.val();
+        document.getElementById("weekLabel").textContent = "Week " + w + (w === realWeek ? " (Current)" : "");
+        if (!state && w === realWeek) {
+          state = generateWeek();
+          db.ref("board/week" + w).set(state);
+        }
+        render();
+      });
     }
 
     function generateWeek() {
       const assignments = {};
       DAYS.forEach(d => assignments[d] = []);
       let toggle = Math.random() < 0.5 ? 0 : 1;
-
       TASKS.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
           const forced = LOCKED[t.id];
-          const who = forced || ASSIGNEES[toggle];
-          assignments[day].push(makeItem(t, t.id + "_" + day, who));
+          assignments[day].push({ id: t.id + "_" + day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], done: false });
           if (!forced) toggle = 1 - toggle;
         });
       });
-
+      // Simplified "appears this week" check for generation
       TASKS.filter(t => t.freq !== "daily").forEach(t => {
-        if (!appearsThisWeek(t)) return;
         (t.days || [6]).forEach(di => {
-          assignments[DAYS[di]].push(makeItem(t, t.id + "_" + di, ASSIGNEES[toggle]));
-          toggle = 1 - toggle;
+           assignments[DAYS[di]].push({ id: t.id + "_" + di, taskId: t.id, name: t.name, freq: t.freq, assignee: ASSIGNEES[toggle], done: false });
+           toggle = 1 - toggle;
         });
       });
-
-      // Wildcards: one per person, excluding locked tasks
-      const amyPool = [], aidenPool = [];
-      DAYS.forEach(day => assignments[day].forEach(item => {
-        if (LOCKED[item.taskId]) return;
-        if (item.assignee === "Amy") amyPool.push(item);
-        else aidenPool.push(item);
-      }));
-      if (amyPool.length) amyPool[Math.floor(Math.random()*amyPool.length)].wildcard = true;
-      if (aidenPool.length) aidenPool[Math.floor(Math.random()*aidenPool.length)].wildcard = true;
-
-      return { assignments, week: currentWeek };
-    }
-
-    function save() { db.ref("board/week" + currentWeek).set(state); }
-
-    function moveItem(item, fromDay, toDay) {
-      const arr = state.assignments[fromDay];
-      const i = arr.findIndex(x => x.id === item.id);
-      if (i > -1) {
-        const [moved] = arr.splice(i, 1);
-        state.assignments[toDay].push(moved);
-        save();
-      }
-    }
-
-    // Pass a daily task: today -> other person, tomorrow's same task -> me
-    function passTask(item, dayIndex) {
-      const me = item.assignee;
-      const other = me === "Amy" ? "Aiden" : "Amy";
-      item.assignee = other; // hand today to other person, stays unchecked
-
-      if (dayIndex < 6) {
-        const nextDay = DAYS[dayIndex + 1];
-        const nextItem = state.assignments[nextDay].find(x => x.taskId === item.taskId);
-        if (nextItem) {
-          nextItem.assignee = me;
-          nextItem.done = false;
-        }
-        save();
-      } else {
-        save();
-        alert("Nema sljedeceg dana ove sedmice (nedjelja). Proslijedjeno samo za danas.");
-      }
-    }
-
-    function timeTagFor(taskId) {
-      const t = times[taskId];
-      if (!t) return null;
-      const span = document.createElement("span");
-      span.className = "time-tag";
-      span.textContent = "🕐 " + t;
-      return span;
+      return { assignments, week: displayedWeek };
     }
 
     function render() {
       board.innerHTML = "";
-      DAYS.forEach((day, dayIndex) => {
-        const items = (state.assignments && state.assignments[day]) || [];
+      let totalPts = 0;
+
+      DAYS.forEach((day, di) => {
+        const items = (state && state.assignments && state.assignments[day]) || [];
         if (items.length === 0) return;
 
         const card = document.createElement("div");
-        card.className = "day-card";
-        const h2 = document.createElement("h2");
-        h2.textContent = day;
+        card.className = "day-card" + (di === todayIndex && displayedWeek === realWeek ? " today" : "");
+        if (di === todayIndex && displayedWeek === realWeek) {
+          const tag = document.createElement("div"); tag.className = "today-tag"; tag.textContent = "TODAY";
+          card.appendChild(tag);
+        }
+
+        const h2 = document.createElement("h2"); h2.textContent = day;
         card.appendChild(h2);
 
         const ul = document.createElement("ul");
         items.forEach(item => {
+          if (item.done) totalPts += (POINTS[item.freq] || 0);
+
           const li = document.createElement("li");
           if (item.done) li.classList.add("done");
-          const locked = !!LOCKED[item.taskId];
 
           const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.checked = item.done;
-          cb.addEventListener("change", () => { item.done = cb.checked; save(); });
-          li.appendChild(cb);
-
-          // Pass button for daily tasks only
-          if (item.freq === "daily") {
-            const pass = document.createElement("button");
-            pass.className = "pass-btn";
-            pass.textContent = "→";
-            pass.title = "Proslijedi sljedeci dan";
-            pass.addEventListener("click", () => passTask(item, dayIndex));
-            li.appendChild(pass);
-          }
+          cb.type = "checkbox"; cb.checked = item.done;
+          cb.addEventListener("change", () => { item.done = cb.checked; db.ref("board/week" + displayedWeek).set(state); });
 
           const nameWrap = document.createElement("div");
           nameWrap.className = "task-name";
           nameWrap.textContent = (item.wildcard ? "⭐ " : "") + item.name;
-          const freqTag = document.createElement("span");
-          freqTag.className = "freq-tag";
-          freqTag.textContent = item.freq;
-          nameWrap.appendChild(document.createTextNode(" "));
-          nameWrap.appendChild(freqTag);
-          const tt = timeTagFor(item.taskId);
-          if (tt) nameWrap.appendChild(tt);
 
           const badge = document.createElement("span");
-          badge.className = "assignee " + item.assignee.toLowerCase() + (locked ? " locked" : "");
-          badge.textContent = item.assignee + (locked ? " 🔒" : "");
-          if (!locked) {
-            badge.addEventListener("click", () => {
-              item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy";
-              save();
-            });
-          }
+          badge.className = "assignee " + item.assignee.toLowerCase() + (LOCKED[item.taskId] ? " locked" : "");
+          badge.textContent = item.assignee;
 
+          li.appendChild(cb);
           li.appendChild(nameWrap);
           li.appendChild(badge);
-
-          // Tools: star (non-locked), day-mover (non-daily)
-          const tools = document.createElement("div");
-          tools.className = "row-tools";
-          if (!locked) {
-            const star = document.createElement("button");
-            star.className = "star-btn" + (item.wildcard ? " active" : "");
-            star.textContent = "⭐";
-            star.addEventListener("click", () => { item.wildcard = !item.wildcard; save(); });
-            tools.appendChild(star);
-          }
-          if (item.freq !== "daily") {
-            const sel = document.createElement("select");
-            DAYS.forEach(d => {
-              const opt = document.createElement("option");
-              opt.value = d; opt.textContent = d;
-              if (d === day) opt.selected = true;
-              sel.appendChild(opt);
-            });
-            sel.addEventListener("change", () => moveItem(item, day, sel.value));
-            tools.appendChild(sel);
-          }
-          if (tools.children.length) li.appendChild(tools);
-
           ul.appendChild(li);
         });
         card.appendChild(ul);
         board.appendChild(card);
       });
 
-      renderNotDue();
+      // Update Points Bar
+      document.getElementById("totalPoints").textContent = totalPts;
+      const progress = Math.min(100, (totalPts / pointGoal) * 100);
+      document.getElementById("progressBar").style.width = progress + "%";
+      document.getElementById("rewardMsg").classList.toggle("active", totalPts >= pointGoal);
     }
 
-    function renderNotDue() {
-      const notDue = TASKS.filter(t => t.freq !== "daily" && !appearsThisWeek(t));
-      if (notDue.length === 0) return;
-      const card = document.createElement("div");
-      card.className = "na-card";
-      const h2 = document.createElement("h2");
-      h2.textContent = "Nije za ovu sedmicu";
-      card.appendChild(h2);
-      const ul = document.createElement("ul");
-      notDue.forEach(t => {
-        const li = document.createElement("li");
-        const nameWrap = document.createElement("div");
-        nameWrap.className = "task-name";
-        nameWrap.textContent = t.name + " ";
-        const freqTag = document.createElement("span");
-        freqTag.className = "freq-tag";
-        freqTag.textContent = t.freq;
-        nameWrap.appendChild(freqTag);
-        const next = document.createElement("div");
-        next.className = "na-next";
-        next.textContent = "sljedeci put: " + nextDue(t);
-        nameWrap.appendChild(next);
-        li.appendChild(nameWrap);
-        ul.appendChild(li);
-      });
-      card.appendChild(ul);
-      board.appendChild(card);
-    }
-
-    // Settings view
-    function renderSettings() {
-      const list = document.getElementById("settingsList");
-      list.innerHTML = "";
-      TASKS.forEach(t => {
-        const row = document.createElement("div");
-        row.className = "set-row";
-        const name = document.createElement("span");
-        name.className = "set-name";
-        name.textContent = t.name;
-        const inp = document.createElement("input");
-        inp.type = "time";
-        inp.value = times[t.id] || "";
-        inp.addEventListener("change", () => {
-          if (inp.value) db.ref("settings/times/" + t.id).set(inp.value);
-          else db.ref("settings/times/" + t.id).remove();
-        });
-        row.appendChild(name);
-        row.appendChild(inp);
-        list.appendChild(row);
-      });
-    }
+    document.getElementById("prevWeek").addEventListener("click", () => { displayedWeek--; loadWeek(displayedWeek); });
+    document.getElementById("nextWeek").addEventListener("click", () => { displayedWeek++; loadWeek(displayedWeek); });
+    document.getElementById("goalInput").addEventListener("change", (e) => { db.ref("settings/goal").set(parseInt(e.target.value)); });
 
     document.getElementById("viewToggle").addEventListener("click", () => {
-      const sv = document.getElementById("settingsView");
-      const mv = document.getElementById("mainView");
-      const btn = document.getElementById("viewToggle");
-      const showSettings = !sv.classList.contains("active");
-      sv.classList.toggle("active", showSettings);
-      mv.style.display = showSettings ? "none" : "block";
-      btn.textContent = showSettings ? "← Board" : "⚙ Settings";
-      if (showSettings) renderSettings();
+       document.getElementById("settingsView").classList.toggle("active");
+       document.getElementById("mainView").style.display = document.getElementById("settingsView").classList.contains("active") ? "none" : "block";
     });
 
-    document.getElementById("reassign").addEventListener("click", () => {
-      if (confirm("Reassign all tasks for this week?")) {
-        state = generateWeek();
-        save();
-      }
-    });
-
-    document.getElementById("wildcardBtn").addEventListener("click", () => {
-      const loser = prompt("Who lost the game this week? Type Amy or Aiden");
-      if (!loser) return;
-      const name = loser.trim().toLowerCase() === "amy" ? "Amy" : "Aiden";
-      DAYS.forEach(day => state.assignments[day].forEach(item => {
-        if (item.wildcard) item.assignee = name;
-      }));
-      save();
-      alert(name + " gets both wildcard tasks this week.");
-    });
-
-    function setNotifState(on) {
-      if (on) {
-        notifyBtn.textContent = "Reminders On";
-        notifyBtn.classList.remove("notif-off"); notifyBtn.classList.add("notif-on");
-      } else {
-        notifyBtn.textContent = "Enable Reminders";
-        notifyBtn.classList.remove("notif-on"); notifyBtn.classList.add("notif-off");
-      }
-      localStorage.setItem("remindersOn", on ? "1" : "0");
-    }
-
-    notifyBtn.addEventListener("click", async () => {
-      const currentlyOn = localStorage.getItem("remindersOn") === "1";
-      if (currentlyOn) { setNotifState(false); return; }
-      if (!("Notification" in window)) { alert("Notifications not supported."); return; }
-      const perm = await Notification.requestPermission();
-      if (perm === "granted") {
-        setNotifState(true);
-        new Notification("Chore Board", { body: "Reminders enabled!" });
-      } else { setNotifState(false); }
-    });
-
-    setNotifState(localStorage.getItem("remindersOn") === "1");
+    loadWeek(realWeek);
   </script>
 </body>
 </html>
