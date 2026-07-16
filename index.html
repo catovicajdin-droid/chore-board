@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="manifest" href="manifest.json">
+  <title>Chore Board</title>
+  <style>
+    :root {
+      --amy: #ec4899;
+      --aiden: #3b82f6;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 12px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    h1 { font-size: 1.3rem; }
+    .status {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #166534;
+    }
+    .status.offline { background: #fee2e2; color: #991b1b; }
+    .legend { display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.85rem; }
+    .legend span { display: flex; align-items: center; gap: 4px; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot.amy { background: var(--amy); }
+    .dot.aiden { background: var(--aiden); }
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    button {
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+    }
+    button.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+    .board { display: grid; gap: 12px; }
+    .day-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .day-card h2 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    ul { list-style: none; }
+    li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    li:last-child { border-bottom: none; }
+    li.done .task-name { text-decoration: line-through; color: var(--muted); }
+    .task-name { flex: 1; font-size: 0.9rem; }
+    .assignee {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .assignee.amy { background: var(--amy); }
+    .assignee.aiden { background: var(--aiden); }
+    .wildcard { font-size: 0.7rem; }
+    input[type="checkbox"] { width: 20px; height: 20px; accent-color: #4f46e5; }
+    .freq-tag {
+      font-size: 0.65rem;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧹 Chore Board</h1>
+    <span id="status" class="status offline">Connecting...</span>
+  </header>
+
+  <div class="legend">
+    <span><span class="dot amy"></span> Amy</span>
+    <span><span class="dot aiden"></span> Aiden</span>
+    <span>⭐ Wildcard</span>
+  </div>
+
+  <div class="controls">
+    <button id="reassign" class="primary">Reassign Week</button>
+    <button id="wildcardBtn">Set Wildcard Loser</button>
+    <button id="notifyBtn">Enable Reminders</button>
+  </div>
+
+  <div id="board" class="board"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAB9wJomz2H4vD-zodOTmXbFDk_kKrFKKI",
+      authDomain: "chore-list-6ccc1.firebaseapp.com",
+      databaseURL: "https://chore-list-6ccc1-default-rtdb.firebaseio.com",
+      projectId: "chore-list-6ccc1",
+      storageBucket: "chore-list-6ccc1.firebasestorage.app",
+      messagingSenderId: "154741520458",
+      appId: "1:154741520458:web:fa0145ead0cb5694698eb3"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const statusEl = document.getElementById("status");
+    const board = document.getElementById("board");
+
+    const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    const ASSIGNEES = ["Amy","Aiden"];
+
+    // Master task list. freq: daily | weekly | biweekly | monthly | quarterly
+    const TASKS = [
+      { id: "t1", name: "Dishes", freq: "daily" },
+      { id: "t2", name: "Wipe counters", freq: "daily" },
+      { id: "t3", name: "Take out trash", freq: "weekly" },
+      { id: "t4", name: "Vacuum floors", freq: "weekly" },
+      { id: "t5", name: "Clean bathroom", freq: "weekly" },
+      { id: "t6", name: "Laundry", freq: "weekly" },
+      { id: "t7", name: "Mop floors", freq: "biweekly" },
+      { id: "t8", name: "Change bed sheets", freq: "biweekly" },
+      { id: "t9", name: "Pay bills", freq: "monthly" },
+      { id: "t10", name: "Clean drain (sink)", freq: "quarterly" }
+    ];
+
+    function getWeekNumber(d) {
+      const date = new Date(d.getTime());
+      date.setHours(0,0,0,0);
+      date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+      const week1 = new Date(date.getFullYear(), 0, 4);
+      return 1 + Math.round(((date - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+    }
+
+    const currentWeek = getWeekNumber(new Date());
+
+    function taskAppearsThisWeek(freq, week) {
+      switch(freq) {
+        case "daily":
+        case "weekly": return true;
+        case "biweekly": return week % 2 === 0;
+        case "monthly": return week % 4 === 0;
+        case "quarterly": return week % 13 === 0;
+        default: return true;
+      }
+    }
+
+    let state = null;
+
+    db.ref("board/week" + currentWeek).on("value", (snap) => {
+      statusEl.textContent = "Live";
+      statusEl.classList.remove("offline");
+      state = snap.val();
+      if (!state) {
+        state = generateWeek();
+        db.ref("board/week" + currentWeek).set(state);
+      }
+      render();
+    }, (err) => {
+      statusEl.textContent = "Offline";
+      statusEl.classList.add("offline");
+    });
+
+    function generateWeek(prevState) {
+      const active = TASKS.filter(t => taskAppearsThisWeek(t.freq, currentWeek));
+      const assignments = {};
+      let toggle = Math.random() < 0.5 ? 0 : 1;
+
+      const dailyTasks = active.filter(t => t.freq === "daily");
+      const otherTasks = active.filter(t => t.freq !== "daily");
+
+      DAYS.forEach(day => {
+        assignments[day] = [];
+        dailyTasks.forEach(t => {
+          assignments[day].push({
+            id: t.id + "_" + day,
+            taskId: t.id,
+            name: t.name,
+            freq: t.freq,
+            assignee: ASSIGNEES[toggle],
+            done: false,
+            wildcard: false
+          });
+          toggle = 1 - toggle;
+        });
+      });
+
+      otherTasks.forEach((t, i) => {
+        const day = DAYS[i % DAYS.length];
+        assignments[day].push({
+          id: t.id + "_wk",
+          taskId: t.id,
+          name: t.name,
+          freq: t.freq,
+          assignee: ASSIGNEES[toggle],
+          done: false,
+          wildcard: false
+        });
+        toggle = 1 - toggle;
+      });
+
+      // Pick 2 wildcards from weekly/other tasks
+      const pool = [];
+      Object.keys(assignments).forEach(day => {
+        assignments[day].forEach(item => {
+          if (item.freq !== "daily") pool.push(item);
+        });
+      });
+      for (let i = 0; i < 2 && pool.length > 0; i++) {
+        const pick = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+        pick.wildcard = true;
+      }
+
+      return { assignments, week: currentWeek };
+    }
+
+    function render() {
+      board.innerHTML = "";
+      DAYS.forEach(day => {
+        const items = (state.assignments && state.assignments[day]) || [];
+        if (items.length === 0) return;
+
+        const card = document.createElement("div");
+        card.className = "day-card";
+
+        const h2 = document.createElement("h2");
+        h2.textContent = day;
+        card.appendChild(h2);
+
+        const ul = document.createElement("ul");
+        items.forEach(item => {
+          const li = document.createElement("li");
+          if (item.done) li.classList.add("done");
+
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked = item.done;
+          cb.addEventListener("change", () => {
+            item.done = cb.checked;
+            db.ref("board/week" + currentWeek).set(state);
+          });
+
+          const nameWrap = document.createElement("div");
+          nameWrap.className = "task-name";
+          nameWrap.textContent = (item.wildcard ? "⭐ " : "") + item.name;
+
+          const freqTag = document.createElement("span");
+          freqTag.className = "freq-tag";
+          freqTag.textContent = item.freq;
+          nameWrap.appendChild(document.createTextNode(" "));
+          nameWrap.appendChild(freqTag);
+
+          const badge = document.createElement("span");
+          badge.className = "assignee " + item.assignee.toLowerCase();
+          badge.textContent = item.assignee;
+          badge.addEventListener("click", () => {
+            item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy";
+            db.ref("board/week" + currentWeek).set(state);
+          });
+
+          li.appendChild(cb);
+          li.appendChild(nameWrap);
+          li.appendChild(badge);
+          ul.appendChild(li);
+        });
+        card.appendChild(ul);
+        board.appendChild(card);
+      });
+    }
+
+    document.getElementById("reassign").addEventListener("click", () => {
+      if (confirm("Reassign all tasks for this week?")) {
+        state = generateWeek();
+        db.ref("board/week" + currentWeek).set(state);
+      }
+    });
+
+    document.getElementById("wildcardBtn").addEventListener("click", () => {
+      const loser = prompt("Who lost the game this week? Type Amy or Aiden");
+      if (!loser) return;
+      const name = loser.trim().toLowerCase() === "amy" ? "Amy" : "Aiden";
+      Object.keys(state.assignments).forEach(day => {
+        state.assignments[day].forEach(item => {
+          if (item.wildcard) item.assignee = name;
+        });
+      });
+      db.ref("board/week" + currentWeek).set(state);
+      alert(name + " gets both wildcard tasks this week.");
+    });
+
+    document.getElementById("notifyBtn").addEventListener("click", async () => {
+      if (!("Notification" in window)) {
+        alert("Notifications not supported on this device.");
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") {
+        new Notification("Chore Board", { body: "Reminders enabled! You will be nudged about tasks." });
+      }
+    });
+  </script>
+</body>
+</html>
