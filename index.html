@@ -19,18 +19,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 12px;
-      -webkit-tap-highlight-color: transparent;
+      background: var(--bg); color: var(--text);
+      padding: 12px; -webkit-tap-highlight-color: transparent;
     }
     header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-      gap: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
     }
     h1 { font-size: 1.3rem; }
     .status { font-size: 0.75rem; padding: 4px 8px; border-radius: 999px; }
@@ -73,10 +67,15 @@
     }
     .assignee.amy { background: var(--amy); }
     .assignee.aiden { background: var(--aiden); }
+    .assignee.locked { opacity: 0.7; cursor: not-allowed; }
     input[type="checkbox"] { width: 20px; height: 20px; accent-color: #4f46e5; }
     .freq-tag {
       font-size: 0.65rem; color: var(--muted); background: var(--bg);
       padding: 2px 6px; border-radius: 4px;
+    }
+    .time-tag {
+      font-size: 0.65rem; color: #4338ca; background: #eef2ff;
+      padding: 2px 6px; border-radius: 4px; margin-left: 4px;
     }
     .row-tools { display: flex; gap: 6px; align-items: center; width: 100%; }
     select {
@@ -88,6 +87,10 @@
       border: none; cursor: pointer; opacity: 0.3;
     }
     .star-btn.active { opacity: 1; }
+    .pass-btn {
+      font-size: 0.85rem; padding: 2px 8px; border-radius: 6px;
+      border: 1px solid var(--border); background: #fef9c3; cursor: pointer;
+    }
     .na-card {
       background: #f1f5f9; border: 1px dashed var(--border);
       border-radius: 12px; padding: 12px; margin-top: 4px;
@@ -95,27 +98,62 @@
     .na-card h2 { font-size: 0.95rem; color: var(--muted); margin-bottom: 8px; }
     .na-card li { color: var(--muted); font-size: 0.82rem; }
     .na-next { font-size: 0.7rem; color: #94a3b8; }
+    /* Settings view */
+    .settings { display: none; }
+    .settings.active { display: block; }
+    .board.hidden { display: none; }
+    .set-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px; margin-bottom: 12px;
+    }
+    .set-card h2 { font-size: 1rem; margin-bottom: 8px; }
+    .set-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border);
+    }
+    .set-row:last-child { border-bottom: none; }
+    .set-name { font-size: 0.88rem; flex: 1; }
+    input[type="time"] {
+      font-family: inherit; font-size: 0.85rem; padding: 4px 6px;
+      border: 1px solid var(--border); border-radius: 6px;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>🧹 Chore Board</h1>
-    <span id="status" class="status off">Connecting...</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="viewToggle">⚙ Settings</button>
+      <span id="status" class="status off">Connecting...</span>
+    </div>
   </header>
 
-  <div class="legend">
-    <span><span class="dot amy"></span> Amy</span>
-    <span><span class="dot aiden"></span> Aiden</span>
-    <span>⭐ Wildcard (tap star)</span>
+  <div id="mainView">
+    <div class="legend">
+      <span><span class="dot amy"></span> Amy</span>
+      <span><span class="dot aiden"></span> Aiden</span>
+      <span>⭐ Wildcard</span>
+      <span>→ Pass to next day</span>
+    </div>
+
+    <div class="controls">
+      <button id="reassign" class="primary">Reassign Week</button>
+      <button id="wildcardBtn">Set Wildcard Loser</button>
+      <button id="notifyBtn" class="notif-off">Enable Reminders</button>
+    </div>
+
+    <div id="board" class="board"></div>
   </div>
 
-  <div class="controls">
-    <button id="reassign" class="primary">Reassign Week</button>
-    <button id="wildcardBtn">Set Wildcard Loser</button>
-    <button id="notifyBtn" class="notif-off">Enable Reminders</button>
+  <div id="settingsView" class="settings">
+    <div class="set-card">
+      <h2>Preferred times</h2>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:8px;">
+        Set once per task. Applies to every day. Leave blank for no time.
+      </p>
+      <div id="settingsList"></div>
+    </div>
   </div>
-
-  <div id="board" class="board"></div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -139,6 +177,7 @@
     const DAYS = ["Ponedjeljak","Utorak","Srijeda","Cetvrtak","Petak","Subota","Nedjelja"];
     const ASSIGNEES = ["Amy","Aiden"];
     const MONTHS = ["januar","februar","mart","april","maj","juni","juli","august","septembar","oktobar","novembar","decembar"];
+    const LOCKED = { "d4": "Aiden" }; // Tuta pinned to Aiden
 
     const TASKS = [
       { id: "d1", name: "Sudje", freq: "daily" },
@@ -184,9 +223,7 @@
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    function firstWeekOfMonth(year, month) {
-      return getWeekNumber(new Date(year, month, 1));
-    }
+    function firstWeekOfMonth(y, m) { return getWeekNumber(new Date(y, m, 1)); }
 
     function appearsThisWeek(t) {
       switch(t.freq) {
@@ -199,16 +236,12 @@
       }
     }
 
-    // Human-readable next-due estimate
     function nextDue(t) {
-      if (t.freq === "biweekly") {
-        return currentWeek % 2 === 0 ? "ove sedmice" : "sljedece sedmice";
-      }
+      if (t.freq === "biweekly") return currentWeek % 2 === 0 ? "ove sedmice" : "sljedece sedmice";
       if (t.freq === "monthly") {
         const fw = firstWeekOfMonth(currentYear, currentMonth);
         if (currentWeek < fw) return "prva sedmica ovog mjeseca";
-        const nm = (currentMonth + 1) % 12;
-        return "prva sedmica u " + MONTHS[nm];
+        return "prva sedmica u " + MONTHS[(currentMonth + 1) % 12];
       }
       if (t.freq === "quarterly") {
         const quarters = [0,3,6,9];
@@ -220,6 +253,14 @@
     }
 
     let state = null;
+    let times = {}; // taskId -> "HH:MM"
+
+    // Load global times (shared across phones)
+    db.ref("settings/times").on("value", (snap) => {
+      times = snap.val() || {};
+      if (state) render();
+      renderSettings();
+    });
 
     db.ref("board/week" + currentWeek).on("value", (snap) => {
       statusEl.textContent = "Live";
@@ -247,8 +288,10 @@
 
       TASKS.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
-          assignments[day].push(makeItem(t, t.id + "_" + day, ASSIGNEES[toggle]));
-          toggle = 1 - toggle;
+          const forced = LOCKED[t.id];
+          const who = forced || ASSIGNEES[toggle];
+          assignments[day].push(makeItem(t, t.id + "_" + day, who));
+          if (!forced) toggle = 1 - toggle;
         });
       });
 
@@ -260,9 +303,10 @@
         });
       });
 
-      // Wildcards: one from each person's pool, any task eligible
+      // Wildcards: one per person, excluding locked tasks
       const amyPool = [], aidenPool = [];
       DAYS.forEach(day => assignments[day].forEach(item => {
+        if (LOCKED[item.taskId]) return;
         if (item.assignee === "Amy") amyPool.push(item);
         else aidenPool.push(item);
       }));
@@ -284,9 +328,38 @@
       }
     }
 
+    // Pass a daily task: today -> other person, tomorrow's same task -> me
+    function passTask(item, dayIndex) {
+      const me = item.assignee;
+      const other = me === "Amy" ? "Aiden" : "Amy";
+      item.assignee = other; // hand today to other person, stays unchecked
+
+      if (dayIndex < 6) {
+        const nextDay = DAYS[dayIndex + 1];
+        const nextItem = state.assignments[nextDay].find(x => x.taskId === item.taskId);
+        if (nextItem) {
+          nextItem.assignee = me;
+          nextItem.done = false;
+        }
+        save();
+      } else {
+        save();
+        alert("Nema sljedeceg dana ove sedmice (nedjelja). Proslijedjeno samo za danas.");
+      }
+    }
+
+    function timeTagFor(taskId) {
+      const t = times[taskId];
+      if (!t) return null;
+      const span = document.createElement("span");
+      span.className = "time-tag";
+      span.textContent = "🕐 " + t;
+      return span;
+    }
+
     function render() {
       board.innerHTML = "";
-      DAYS.forEach(day => {
+      DAYS.forEach((day, dayIndex) => {
         const items = (state.assignments && state.assignments[day]) || [];
         if (items.length === 0) return;
 
@@ -300,11 +373,23 @@
         items.forEach(item => {
           const li = document.createElement("li");
           if (item.done) li.classList.add("done");
+          const locked = !!LOCKED[item.taskId];
 
           const cb = document.createElement("input");
           cb.type = "checkbox";
           cb.checked = item.done;
           cb.addEventListener("change", () => { item.done = cb.checked; save(); });
+          li.appendChild(cb);
+
+          // Pass button for daily tasks only
+          if (item.freq === "daily") {
+            const pass = document.createElement("button");
+            pass.className = "pass-btn";
+            pass.textContent = "→";
+            pass.title = "Proslijedi sljedeci dan";
+            pass.addEventListener("click", () => passTask(item, dayIndex));
+            li.appendChild(pass);
+          }
 
           const nameWrap = document.createElement("div");
           nameWrap.className = "task-name";
@@ -314,30 +399,32 @@
           freqTag.textContent = item.freq;
           nameWrap.appendChild(document.createTextNode(" "));
           nameWrap.appendChild(freqTag);
+          const tt = timeTagFor(item.taskId);
+          if (tt) nameWrap.appendChild(tt);
 
           const badge = document.createElement("span");
-          badge.className = "assignee " + item.assignee.toLowerCase();
-          badge.textContent = item.assignee;
-          badge.addEventListener("click", () => {
-            item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy";
-            save();
-          });
+          badge.className = "assignee " + item.assignee.toLowerCase() + (locked ? " locked" : "");
+          badge.textContent = item.assignee + (locked ? " 🔒" : "");
+          if (!locked) {
+            badge.addEventListener("click", () => {
+              item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy";
+              save();
+            });
+          }
 
-          li.appendChild(cb);
           li.appendChild(nameWrap);
           li.appendChild(badge);
 
-          // Tools row: star on ALL tasks; day-mover only for non-daily
+          // Tools: star (non-locked), day-mover (non-daily)
           const tools = document.createElement("div");
           tools.className = "row-tools";
-
-          const star = document.createElement("button");
-          star.className = "star-btn" + (item.wildcard ? " active" : "");
-          star.textContent = "⭐";
-          star.title = "Toggle wildcard";
-          star.addEventListener("click", () => { item.wildcard = !item.wildcard; save(); });
-          tools.appendChild(star);
-
+          if (!locked) {
+            const star = document.createElement("button");
+            star.className = "star-btn" + (item.wildcard ? " active" : "");
+            star.textContent = "⭐";
+            star.addEventListener("click", () => { item.wildcard = !item.wildcard; save(); });
+            tools.appendChild(star);
+          }
           if (item.freq !== "daily") {
             const sel = document.createElement("select");
             DAYS.forEach(d => {
@@ -349,8 +436,8 @@
             sel.addEventListener("change", () => moveItem(item, day, sel.value));
             tools.appendChild(sel);
           }
+          if (tools.children.length) li.appendChild(tools);
 
-          li.appendChild(tools);
           ul.appendChild(li);
         });
         card.appendChild(ul);
@@ -360,17 +447,14 @@
       renderNotDue();
     }
 
-    // Safety section: non-daily tasks not due this week
     function renderNotDue() {
       const notDue = TASKS.filter(t => t.freq !== "daily" && !appearsThisWeek(t));
       if (notDue.length === 0) return;
-
       const card = document.createElement("div");
       card.className = "na-card";
       const h2 = document.createElement("h2");
       h2.textContent = "Nije za ovu sedmicu";
       card.appendChild(h2);
-
       const ul = document.createElement("ul");
       notDue.forEach(t => {
         const li = document.createElement("li");
@@ -391,6 +475,40 @@
       card.appendChild(ul);
       board.appendChild(card);
     }
+
+    // Settings view
+    function renderSettings() {
+      const list = document.getElementById("settingsList");
+      list.innerHTML = "";
+      TASKS.forEach(t => {
+        const row = document.createElement("div");
+        row.className = "set-row";
+        const name = document.createElement("span");
+        name.className = "set-name";
+        name.textContent = t.name;
+        const inp = document.createElement("input");
+        inp.type = "time";
+        inp.value = times[t.id] || "";
+        inp.addEventListener("change", () => {
+          if (inp.value) db.ref("settings/times/" + t.id).set(inp.value);
+          else db.ref("settings/times/" + t.id).remove();
+        });
+        row.appendChild(name);
+        row.appendChild(inp);
+        list.appendChild(row);
+      });
+    }
+
+    document.getElementById("viewToggle").addEventListener("click", () => {
+      const sv = document.getElementById("settingsView");
+      const mv = document.getElementById("mainView");
+      const btn = document.getElementById("viewToggle");
+      const showSettings = !sv.classList.contains("active");
+      sv.classList.toggle("active", showSettings);
+      mv.style.display = showSettings ? "none" : "block";
+      btn.textContent = showSettings ? "← Board" : "⚙ Settings";
+      if (showSettings) renderSettings();
+    });
 
     document.getElementById("reassign").addEventListener("click", () => {
       if (confirm("Reassign all tasks for this week?")) {
