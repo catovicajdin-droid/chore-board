@@ -33,8 +33,14 @@
     .today-btn { font-size: 0.7rem; padding: 4px 8px; background: #eef2ff; color: var(--accent); border: 1px solid #c7d2fe; border-radius: 6px; }
 
     .reward-zone { border-top: 1px solid var(--border); padding-top: 12px; }
-    .score-summary { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px; }
-    .progress-bg { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; }
+    .score-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .score-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
+    .score-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+    .score-value { font-size: 1.4rem; font-weight: bold; }
+    .score-value.amy { color: var(--amy); }
+    .score-value.aiden { color: var(--aiden); }
+    .goal-info { font-size: 0.75rem; color: var(--muted); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+    .progress-bg { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 8px; }
     .progress-fill { background: #22c55e; height: 100%; transition: width 0.4s ease; width: 0%; }
     .reward-msg { font-size: 0.8rem; margin-top: 6px; font-weight: bold; color: #16a34a; display: none; }
     .reward-msg.active { display: block; }
@@ -117,11 +123,20 @@
       </div>
       <div class="reward-zone">
         <div class="score-summary">
-          <span>Points: <strong id="totalPoints">0</strong></span>
-          <span>Goal: <strong id="goalText">100</strong></span>
+          <div class="score-card">
+            <div class="score-label">Amy</div>
+            <div class="score-value amy" id="amyPoints">0</div>
+          </div>
+          <div class="score-card">
+            <div class="score-label">Aiden</div>
+            <div class="score-value aiden" id="aidenPoints">0</div>
+          </div>
         </div>
         <div class="progress-bg"><div id="progressBar" class="progress-fill"></div></div>
-        <div id="rewardMsg" class="reward-msg">🎁 Goal Reached!</div>
+        <div class="goal-info">
+          <div style="font-size: 0.8rem; margin-bottom: 4px;"><strong id="totalPoints">0</strong> / <strong id="goalText">100</strong> points</div>
+          <div id="rewardMsg" class="reward-msg">🎁 Goal Reached!</div>
+        </div>
       </div>
     </div>
 
@@ -298,14 +313,13 @@
         nextState = generateWeek(nextW, startToggle);
       }
 
-      // Generate a unique ID for the new instance
       const newId = item.taskId + "_moved_" + Date.now();
       const movedItem = {
         ...item,
         id: newId,
         done: false,
         wasPushedFromPrev: true,
-        pushedFromWeek: displayedWeek // track for undo
+        pushedFromWeek: displayedWeek
       };
 
       if (!nextState.assignments[currentDay]) nextState.assignments[currentDay] = [];
@@ -313,7 +327,6 @@
 
       await db.ref("board/week" + nextW).set(nextState);
 
-      // Mark original as moved
       item.isMoved = true;
       item.movedToId = newId;
       item.done = false;
@@ -326,12 +339,10 @@
       let nextState = nextSnap.val();
 
       if (nextState && nextState.assignments[currentDay]) {
-        // Remove the instance from next week
         nextState.assignments[currentDay] = nextState.assignments[currentDay].filter(x => x.id !== item.movedToId);
         await db.ref("board/week" + nextW).set(nextState);
       }
 
-      // Restore original
       item.isMoved = false;
       item.movedToId = null;
       save();
@@ -339,7 +350,7 @@
 
     function render() {
       board.innerHTML = "";
-      let totalPts = 0;
+      let amyPts = 0, aidenPts = 0;
       if (!state || !state.assignments) return;
 
       DAYS.forEach((day, dayIdx) => {
@@ -360,7 +371,11 @@
 
         const ul = document.createElement("ul");
         items.forEach(item => {
-          if (item.done && !item.isMoved) totalPts += (POINTS[item.freq] || 0);
+          if (item.done && !item.isMoved) {
+            const pts = POINTS[item.freq] || 0;
+            if (item.assignee === "Amy") amyPts += pts;
+            else aidenPts += pts;
+          }
           const li = document.createElement("li");
           if (currentFilter !== "All" && item.assignee !== currentFilter) li.classList.add("hidden");
           if (item.done) li.classList.add("done");
@@ -470,64 +485,10 @@
       });
 
       renderNotDue();
+      const totalPts = amyPts + aidenPts;
+      document.getElementById("amyPoints").textContent = amyPts;
+      document.getElementById("aidenPoints").textContent = aidenPts;
       document.getElementById("totalPoints").textContent = totalPts;
       const progress = Math.min(100, (totalPts / settings.goal) * 100);
       document.getElementById("progressBar").style.width = progress + "%";
-      document.getElementById("rewardMsg").classList.toggle("active", totalPts >= settings.goal);
-    }
-
-    function renderNotDue() {
-      const notDue = TASKS.filter(t => !t.freq.includes("daily") && !appearsThisWeek(t, displayedWeek));
-      if (notDue.length === 0) return;
-      const card = document.createElement("div"); card.className = "na-card";
-      card.innerHTML = `<h2>Nije za ovu sedmicu</h2><ul id="naList"></ul>`;
-      const ul = card.querySelector("#naList");
-      notDue.forEach(t => {
-        const li = document.createElement("li"); li.textContent = t.name + " (" + t.freq + ")";
-        ul.appendChild(li);
-      });
-      board.appendChild(card);
-    }
-
-    function renderSettings() {
-      const list = document.getElementById("settingsList"); list.innerHTML = "";
-      TASKS.forEach(t => {
-        const row = document.createElement("div"); row.className = "set-row";
-        row.innerHTML = `<span style="font-size:0.8rem">${t.name}</span> <input type="time" value="${settings.times[t.id] || ''}" style="padding:2px;font-size:0.8rem">`;
-        row.querySelector("input").addEventListener("change", (e) => db.ref("settings/times/" + t.id).set(e.target.value));
-        list.appendChild(row);
-      });
-    }
-
-    document.querySelectorAll(".filter-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        currentFilter = btn.dataset.filter;
-        render();
-      });
-    });
-
-    document.getElementById("prevWeek").addEventListener("click", () => { displayedWeek--; loadWeek(displayedWeek); });
-    document.getElementById("nextWeek").addEventListener("click", () => { displayedWeek++; loadWeek(displayedWeek); });
-    document.getElementById("todayBtn").addEventListener("click", () => { displayedWeek = realWeek; loadWeek(displayedWeek); });
-    document.getElementById("goalInput").addEventListener("change", (e) => db.ref("settings/goal").set(parseInt(e.target.value)));
-    document.getElementById("viewToggle").addEventListener("click", () => {
-      const sv = document.getElementById("settingsView"); const mv = document.getElementById("mainView");
-      sv.classList.toggle("active"); mv.style.display = sv.classList.contains("active") ? "none" : "block";
-    });
-    document.getElementById("reassign").addEventListener("click", () => {
-      if (confirm("Resetuj sve zadatke za ovu sedmicu?")) { state = generateWeek(displayedWeek); save(); }
-    });
-    document.getElementById("wildcardBtn").addEventListener("click", () => {
-      const name = prompt("Ko je izgubio wildcard igru? (Amy/Aiden)")?.trim();
-      if (!name) return;
-      const f = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-      DAYS.forEach(d => state.assignments[d].forEach(i => { if (i.wildcard) i.assignee = f; }));
-      save();
-    });
-
-    loadWeek(realWeek);
-  </script>
-</body>
-</html>
+      document.getElementById("rewardMsg").classList.toggle("active", totalPts >= set
