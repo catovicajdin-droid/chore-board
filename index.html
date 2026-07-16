@@ -38,11 +38,17 @@
     .reward-msg { font-size: 0.8rem; margin-top: 6px; font-weight: bold; color: #16a34a; display: none; }
     .reward-msg.active { display: block; }
 
-    .legend { display: flex; gap: 12px; margin-bottom: 12px; font-size: 0.85rem; flex-wrap: wrap; }
-    .legend span { display: flex; align-items: center; gap: 4px; }
-    .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .dot.amy { background: var(--amy); }
-    .dot.aiden { background: var(--aiden); }
+    /* Filter UI */
+    .filter-bar {
+      display: flex; background: #e2e8f0; padding: 3px; border-radius: 10px; margin-bottom: 12px;
+    }
+    .filter-btn {
+      flex: 1; border: none; padding: 8px; font-size: 0.85rem; border-radius: 8px;
+      background: transparent; color: var(--muted); cursor: pointer; transition: all 0.2s;
+    }
+    .filter-btn.active { background: white; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-weight: bold; }
+    .filter-btn.active.amy { color: var(--amy); }
+    .filter-btn.active.aiden { color: var(--aiden); }
 
     .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
     button {
@@ -65,6 +71,7 @@
 
     ul { list-style: none; }
     li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    li.hidden { display: none; }
     li:last-child { border-bottom: none; }
     li.done .task-name { text-decoration: line-through; color: var(--muted); }
     .task-name { flex: 1; min-width: 120px; font-size: 0.9rem; }
@@ -83,7 +90,6 @@
     .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 4px; }
     .na-card h2 { font-size: 0.95rem; color: var(--muted); margin-bottom: 8px; }
     .na-card li { color: var(--muted); font-size: 0.82rem; }
-    .na-next { font-size: 0.7rem; color: #94a3b8; }
 
     .settings { display: none; }
     .settings.active { display: block; }
@@ -118,11 +124,11 @@
       </div>
     </div>
 
-    <div class="legend">
-      <span><span class="dot amy"></span> Amy</span>
-      <span><span class="dot aiden"></span> Aiden</span>
-      <span>⭐ Wildcard</span>
-      <span>→ Pass</span>
+    <!-- Assignee Filter -->
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="All">Both</button>
+      <button class="filter-btn amy" data-filter="Amy">Amy</button>
+      <button class="filter-btn aiden" data-filter="Aiden">Aiden</button>
     </div>
 
     <div class="controls">
@@ -218,21 +224,14 @@
     let displayedWeek = realWeek;
     let state = null;
     let settings = { times: {}, goal: 100 };
-
-    function firstWeekOfMonth(y, m) { return getWeekNumber(new Date(y, m, 1)); }
+    let currentFilter = "All";
 
     function appearsThisWeek(t, weekNum) {
       if (t.freq === "weekly") return true;
       if (t.freq === "biweekly") return weekNum % 2 === 0;
-      // Note: Month logic is simplified for non-current week viewing
       if (t.freq === "monthly") return weekNum % 4 === 1;
       if (t.freq === "quarterly") return weekNum % 12 === 1;
       return true;
-    }
-
-    function nextDue(t) {
-      if (t.freq === "biweekly") return displayedWeek % 2 === 0 ? "ove sedmice" : "sljedece sedmice";
-      return "uskoro";
     }
 
     db.ref("settings").on("value", (snap) => {
@@ -286,6 +285,9 @@
 
       DAYS.forEach((day, dayIdx) => {
         const items = state.assignments[day] || [];
+        const visibleItems = currentFilter === "All" ? items : items.filter(i => i.assignee === currentFilter);
+
+        if (visibleItems.length === 0 && currentFilter !== "All") return;
         if (items.length === 0) return;
 
         const card = document.createElement("div");
@@ -303,6 +305,7 @@
           if (item.done) totalPts += (POINTS[item.freq] || 0);
 
           const li = document.createElement("li");
+          if (currentFilter !== "All" && item.assignee !== currentFilter) li.classList.add("hidden");
           if (item.done) li.classList.add("done");
           const locked = !!LOCKED[item.taskId];
 
@@ -376,13 +379,16 @@
           li.appendChild(tools);
           ul.appendChild(li);
         });
+
+        // Hide empty days when filtering
+        if (ul.querySelectorAll('li:not(.hidden)').length === 0 && currentFilter !== "All") return;
+
         card.appendChild(ul);
         board.appendChild(card);
       });
 
       renderNotDue();
 
-      // Update Progress
       document.getElementById("totalPoints").textContent = totalPts;
       const progress = Math.min(100, (totalPts / settings.goal) * 100);
       document.getElementById("progressBar").style.width = progress + "%";
@@ -398,7 +404,7 @@
       const ul = document.createElement("ul");
       notDue.forEach(t => {
         const li = document.createElement("li");
-        li.textContent = t.name + " (" + t.freq + ") - sljedeći put: " + nextDue(t);
+        li.textContent = t.name + " (" + t.freq + ")";
         ul.appendChild(li);
       });
       card.appendChild(ul);
@@ -409,31 +415,36 @@
       const list = document.getElementById("settingsList"); list.innerHTML = "";
       TASKS.forEach(t => {
         const row = document.createElement("div"); row.className = "set-row";
-        row.innerHTML = `<span class="set-name">${t.name}</span> <input type="time" data-id="${t.id}" value="${settings.times[t.id] || ''}">`;
-        row.querySelector("input").addEventListener("change", (e) => {
-          db.ref("settings/times/" + t.id).set(e.target.value);
-        });
+        row.innerHTML = `<span class="set-name">${t.name}</span> <input type="time" value="${settings.times[t.id] || ''}">`;
+        row.querySelector("input").addEventListener("change", (e) => db.ref("settings/times/" + t.id).set(e.target.value));
         list.appendChild(row);
       });
     }
 
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.filter;
+        render();
+      });
+    });
+
     document.getElementById("prevWeek").addEventListener("click", () => { displayedWeek--; loadWeek(displayedWeek); });
     document.getElementById("nextWeek").addEventListener("click", () => { displayedWeek++; loadWeek(displayedWeek); });
     document.getElementById("goalInput").addEventListener("change", (e) => db.ref("settings/goal").set(parseInt(e.target.value)));
-
     document.getElementById("viewToggle").addEventListener("click", () => {
       const sv = document.getElementById("settingsView"); const mv = document.getElementById("mainView");
       sv.classList.toggle("active"); mv.style.display = sv.classList.contains("active") ? "none" : "block";
     });
-
     document.getElementById("reassign").addEventListener("click", () => {
       if (confirm("Reassign all?")) { state = generateWeek(displayedWeek); save(); }
     });
-
     document.getElementById("wildcardBtn").addEventListener("click", () => {
       const name = prompt("Amy or Aiden?")?.trim();
       if (!name) return;
-      DAYS.forEach(d => state.assignments[d].forEach(i => { if (i.wildcard) i.assignee = name; }));
+      const formatted = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+      DAYS.forEach(d => state.assignments[d].forEach(i => { if (i.wildcard) i.assignee = formatted; }));
       save();
     });
 
