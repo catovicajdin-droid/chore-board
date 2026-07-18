@@ -17,6 +17,7 @@
       font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg); color: var(--text);
       padding: 12px; -webkit-tap-highlight-color: transparent;
+      scroll-behavior: smooth;
     }
     header {
       display: flex; align-items: center; justify-content: space-between;
@@ -65,10 +66,18 @@
     button.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
 
     .board { display: grid; gap: 12px; }
-    .day-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; position: relative; }
-    .day-card.today { border: 2px solid var(--accent); background: #fefeff; }
+    .day-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; position: relative; transition: all 0.2s ease; }
+    .day-card.today { border: 2px solid var(--accent); background: #fefeff; scroll-margin-top: 20px; }
     .today-tag { position: absolute; top: -10px; right: 10px; background: var(--accent); color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 999px; }
-    .day-card h2 { font-size: 1rem; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+
+    .day-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 8px; user-select: none; }
+    .day-header h2 { font-size: 1rem; }
+    .toggle-icon { font-size: 0.8rem; color: var(--muted); transition: transform 0.2s ease; }
+
+    /* Collapsible Logic */
+    .day-card.collapsed .day-content { display: none; }
+    .day-card.collapsed .toggle-icon { transform: rotate(-90deg); }
+    .day-card.collapsed { padding-bottom: 10px; }
 
     ul { list-style: none; }
     li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
@@ -76,7 +85,6 @@
     li.is-moved .task-name { text-decoration: line-through; }
     li:last-child { border-bottom: none; }
 
-    /* Status-based styles */
     .status-completed .task-name { text-decoration: line-through; color: var(--muted); }
     .status-incomplete .task-name { color: #dc2626; text-decoration: line-through; opacity: 0.8; }
     .status-notApplicable .task-name { color: #7c3aed; font-style: italic; text-decoration: line-through; }
@@ -200,20 +208,9 @@
     const DAYS = ["Ponedjeljak","Utorak","Srijeda","Cetvrtak","Petak","Subota","Nedjelja"];
     const ASSIGNEES = ["Amy","Aiden"];
     const LOCKED = { "d4": "Aiden" };
-
     const POINTS = {
-      "Dorucak": 2,
-      "Rucak": 3,
-      "Sudje": 2,
-      "Slaganje vesa": 2,
-      "Masina za ves/susilica": 3,
-      daily: 1,
-      weekly: 5,
-      "2x weekly": 5,
-      "3x weekly": 5,
-      biweekly: 10,
-      monthly: 15,
-      quarterly: 20
+      "Dorucak": 2, "Rucak": 3, "Sudje": 2, "Slaganje vesa": 2, "Masina za ves/susilica": 3,
+      daily: 1, weekly: 5, "2x weekly": 5, "3x weekly": 5, biweekly: 10, monthly: 15, quarterly: 20
     };
 
     const TASKS = [
@@ -262,6 +259,9 @@
     let state = null;
     let settings = { times: {}, goal: 100 };
     let currentFilter = "All";
+
+    // Track collapsed state locally
+    let collapsedDays = {};
 
     function appearsThisWeek(t, weekNum) {
       if (t.freq.includes("weekly")) return true;
@@ -380,25 +380,40 @@
         if (visibleItems.length === 0 && currentFilter !== "All") return;
         if (items.length === 0) return;
 
+        const isToday = dayIdx === todayIndex && displayedWeek === realWeek;
         const card = document.createElement("div");
-        card.className = "day-card" + (dayIdx === todayIndex && displayedWeek === realWeek ? " today" : "");
-        if (dayIdx === todayIndex && displayedWeek === realWeek) {
+        card.className = "day-card";
+        if (isToday) card.classList.add("today");
+
+        // Initial collapse state: collapse non-today days by default on first render
+        if (collapsedDays[day] === undefined) {
+           collapsedDays[day] = !isToday;
+        }
+        if (collapsedDays[day]) card.classList.add("collapsed");
+
+        if (isToday) {
           const tag = document.createElement("div");
           tag.className = "today-tag";
           tag.textContent = "DANAS";
           card.appendChild(tag);
         }
 
-        const h2 = document.createElement("h2");
-        h2.textContent = day;
-        card.appendChild(h2);
+        const header = document.createElement("div");
+        header.className = "day-header";
+        header.innerHTML = `<h2>${day}</h2><span class="toggle-icon">▼</span>`;
+        header.onclick = () => {
+           collapsedDays[day] = !collapsedDays[day];
+           card.classList.toggle("collapsed");
+        };
+        card.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "day-content";
 
         const ul = document.createElement("ul");
         items.forEach(item => {
-          // Compatibility fallback: if status doesn't exist, check the old .done boolean
           const status = item.status || (item.done ? "completed" : "pending");
 
-          // Point Logic: Priority is Name > Freq. Only "completed" awards points.
           if (status === "completed" && !item.isMoved) {
             const pts = POINTS[item.name] || POINTS[item.freq] || 0;
             if (item.assignee === "Amy") amyPts += pts;
@@ -410,7 +425,6 @@
           if (currentFilter !== "All" && item.assignee !== currentFilter) li.classList.add("hidden");
           if (item.isMoved) li.classList.add("is-moved");
 
-          // Status Dropdown
           const statusSel = document.createElement("select");
           statusSel.className = "status-select";
           statusSel.disabled = item.isMoved;
@@ -428,7 +442,6 @@
           });
           statusSel.addEventListener("change", () => {
             item.status = statusSel.value;
-            // Maintain .done for backward compatibility
             item.done = item.status === "completed";
             save();
           });
@@ -462,7 +475,6 @@
           const nameWrap = document.createElement("div");
           nameWrap.className = "task-name";
           nameWrap.textContent = (item.wildcard ? "⭐ " : "") + item.name;
-
           const freqTag = document.createElement("span");
           freqTag.className = "freq-tag";
           freqTag.textContent = "(" + item.freq + ")";
@@ -487,7 +499,6 @@
               save();
             });
           }
-
           li.appendChild(nameWrap);
           li.appendChild(badge);
 
@@ -521,7 +532,6 @@
               moveBtn.disabled = !!item.wasPushedFromPrev;
               moveBtn.addEventListener("click", () => moveTaskToNextWeek(item, day));
               tools.appendChild(moveBtn);
-
               const sel = document.createElement("select");
               DAYS.forEach(d => {
                 const opt = document.createElement("option");
@@ -545,7 +555,8 @@
         });
 
         if (ul.querySelectorAll("li:not(.hidden)").length === 0 && currentFilter !== "All") return;
-        card.appendChild(ul);
+        content.appendChild(ul);
+        card.appendChild(content);
         board.appendChild(card);
       });
 
@@ -564,16 +575,7 @@
       if (notDueItems.length === 0) return;
       const card = document.createElement("div");
       card.className = "na-card";
-      const h = document.createElement("h2");
-      h.textContent = "Not Due This Week";
-      card.appendChild(h);
-      const ul = document.createElement("ul");
-      notDueItems.forEach(t => {
-        const li = document.createElement("li");
-        li.textContent = t.name + " (" + t.freq + ")";
-        ul.appendChild(li);
-      });
-      card.appendChild(ul);
+      card.innerHTML = `<h2>Not Due This Week</h2><ul>${notDueItems.map(t => `<li>${t.name} (${t.freq})</li>`).join('')}</ul>`;
       board.appendChild(card);
     }
 
@@ -583,52 +585,40 @@
       TASKS.filter(t => t.freq !== "daily").forEach(t => {
         const row = document.createElement("div");
         row.className = "set-row";
-        const label = document.createElement("span");
-        label.textContent = t.name;
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = settings.times[t.id] || "";
-        input.placeholder = "e.g. 30 min";
-        input.style.width = "80px";
-        input.style.padding = "4px";
-        input.addEventListener("change", () => {
-          settings.times[t.id] = input.value;
+        row.innerHTML = `<span>${t.name}</span><input type="text" value="${settings.times[t.id] || ""}" placeholder="e.g. 30 min" style="width: 80px; padding: 4px;">`;
+        row.querySelector("input").addEventListener("change", (e) => {
+          settings.times[t.id] = e.target.value;
           set(ref(db, "settings"), settings);
         });
-        row.appendChild(label);
-        row.appendChild(input);
         list.appendChild(row);
       });
     }
 
     document.getElementById("viewToggle").addEventListener("click", () => {
-      const isMainVisible = !document.getElementById("mainView").classList.contains("hidden");
-      if (isMainVisible) {
-        document.getElementById("mainView").classList.add("hidden");
-        document.getElementById("settingsView").classList.remove("hidden");
-      } else {
-        document.getElementById("mainView").classList.remove("hidden");
-        document.getElementById("settingsView").classList.add("hidden");
-      }
+      document.getElementById("mainView").classList.toggle("hidden");
+      document.getElementById("settingsView").classList.toggle("hidden");
     });
 
-    document.getElementById("prevWeek").addEventListener("click", () => {
-      displayedWeek--;
-      loadWeek(displayedWeek);
-    });
-
-    document.getElementById("nextWeek").addEventListener("click", () => {
-      displayedWeek++;
-      loadWeek(displayedWeek);
-    });
+    document.getElementById("prevWeek").addEventListener("click", () => { displayedWeek--; loadWeek(displayedWeek); });
+    document.getElementById("nextWeek").addEventListener("click", () => { displayedWeek++; loadWeek(displayedWeek); });
 
     document.getElementById("todayBtn").addEventListener("click", () => {
       displayedWeek = realWeek;
       loadWeek(displayedWeek);
+      // Wait a moment for render to complete, then scroll
+      setTimeout(() => {
+        const todayCard = document.querySelector(".day-card.today");
+        if (todayCard) {
+          // Expand today card if it was collapsed
+          todayCard.classList.remove("collapsed");
+          collapsedDays[DAYS[todayIndex]] = false;
+          todayCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     });
 
     document.getElementById("reassign").addEventListener("click", () => {
-      if (confirm("Reset current week and reassign tasks? Progress will be lost.")) {
+      if (confirm("Reset current week and reassign tasks?")) {
         state = generateWeek(displayedWeek);
         save();
       }
@@ -636,7 +626,6 @@
 
     document.getElementById("wildcardBtn").addEventListener("click", () => {
       const wildcards = [];
-      if (!state || !state.assignments) return;
       Object.values(state.assignments).forEach(day => {
         day.forEach(item => { if (item.wildcard) wildcards.push(item); });
       });
@@ -646,10 +635,7 @@
     });
 
     document.getElementById("notifyBtn").addEventListener("click", () => {
-      if (!("Notification" in window)) return alert("Notifications not supported");
-      Notification.requestPermission().then(permission => {
-        if (permission === "granted") alert("Notifications enabled!");
-      });
+      Notification.requestPermission().then(p => { if (p === "granted") alert("Notifications enabled!"); });
     });
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
@@ -661,8 +647,8 @@
       });
     });
 
-    document.getElementById("goalInput").addEventListener("change", () => {
-      settings.goal = parseInt(document.getElementById("goalInput").value) || 100;
+    document.getElementById("goalInput").addEventListener("change", (e) => {
+      settings.goal = parseInt(e.target.value) || 100;
       set(ref(db, "settings"), settings);
     });
 
