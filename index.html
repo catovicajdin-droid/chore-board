@@ -27,7 +27,7 @@
     .status.on { background: #dcfce7; color: #166534; }
     .status.off { background: #fee2e2; color: #991b1b; }
 
-    .hidden { display: none !important; } /* Added this missing class */
+    .hidden { display: none !important; }
 
     .nav-container { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .week-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
@@ -57,7 +57,7 @@
     .filter-btn.active.aiden { color: var(--aiden); }
 
     .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn) {
+    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select) {
       font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
       border: 1px solid var(--border); border-radius: 8px;
       background: var(--card); color: var(--text); cursor: pointer;
@@ -75,13 +75,15 @@
     li.is-moved { opacity: 0.4; background: #f1f5f9; }
     li.is-moved .task-name { text-decoration: line-through; }
     li:last-child { border-bottom: none; }
-    li.done .task-name { text-decoration: line-through; color: var(--muted); }
+    .status-completed .task-name { text-decoration: line-through; color: var(--muted); }
+    .status-incomplete .task-name { color: #dc2626; text-decoration: line-through; opacity: 0.8; }
+    .status-notApplicable .task-name { color: #7c3aed; font-style: italic; text-decoration: line-through; }
     .task-name { flex: 1; min-width: 120px; font-size: 0.9rem; }
     .assignee { font-size: 0.75rem; padding: 4px 10px; border-radius: 999px; color: #fff; cursor: pointer; border: none; font-weight: bold; }
     .assignee.amy { background: var(--amy); }
     .assignee.aiden { background: var(--aiden); }
     .assignee.locked { opacity: 0.6; cursor: not-allowed; }
-    input[type="checkbox"] { width: 22px; height: 22px; accent-color: #4f46e5; }
+    .status-select { font-size: 0.75rem; padding: 5px; border-radius: 6px; border: 1px solid var(--border); min-width: 92px; background: #fff; }
     .freq-tag { font-size: 0.65rem; color: var(--muted); background: var(--bg); padding: 2px 6px; border-radius: 4px; }
     .time-tag { font-size: 0.65rem; color: #4338ca; background: #eef2ff; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
     .row-tools { display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 6px; padding-left: 30px; }
@@ -171,7 +173,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAB9wJomz2H4vD-zodOTmXbFDk_kKrFKKI",
@@ -303,7 +305,7 @@
       TASKS.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
           const forced = LOCKED[t.id];
-          assignments[day].push({ id: t.id + "_" + day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], done: false, wildcard: (t.id === "d1" || t.id === "d2") });
+          assignments[day].push({ id: t.id + "_" + day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], status: "pending", wildcard: (t.id === "d1" || t.id === "d2") });
           if (!forced) toggle = 1 - toggle;
         });
       });
@@ -311,7 +313,7 @@
       TASKS.filter(t => t.freq !== "daily").forEach(t => {
         if (!appearsThisWeek(t, w)) return;
         (t.days || [6]).forEach(di => {
-          assignments[DAYS[di]].push({ id: t.id + "_" + di, taskId: t.id, name: t.name, freq: t.freq, assignee: ASSIGNEES[toggle], done: false, wildcard: false });
+          assignments[DAYS[di]].push({ id: t.id + "_" + di, taskId: t.id, name: t.name, freq: t.freq, assignee: ASSIGNEES[toggle], status: "pending", wildcard: false });
           toggle = 1 - toggle;
         });
       });
@@ -335,13 +337,13 @@
         nextState = generateWeek(nextW, startToggle);
       }
       const newId = item.taskId + "_moved_" + Date.now();
-      const movedItem = { ...item, id: newId, done: false, wasPushedFromPrev: true, pushedFromWeek: displayedWeek };
+      const movedItem = { ...item, id: newId, status: "pending", wasPushedFromPrev: true, pushedFromWeek: displayedWeek };
       if (!nextState.assignments[currentDay]) nextState.assignments[currentDay] = [];
       nextState.assignments[currentDay].push(movedItem);
       await set(ref(db, "board/week" + nextW), nextState);
       item.isMoved = true;
       item.movedToId = newId;
-      item.done = false;
+      item.status = "pending";
       save();
     }
 
@@ -386,26 +388,41 @@
 
         const ul = document.createElement("ul");
         items.forEach(item => {
-          if (item.done && !item.isMoved) {
+          const status = item.status || "pending";
+          const awardsPoints = ["completed", "incomplete", "notApplicable"].includes(status);
+
+          if (awardsPoints && !item.isMoved) {
             const pts = POINTS[item.name] || POINTS[item.freq] || 0;
             if (item.assignee === "Amy") amyPts += pts;
             else aidenPts += pts;
           }
 
           const li = document.createElement("li");
+          li.classList.add("status-" + status);
           if (currentFilter !== "All" && item.assignee !== currentFilter) li.classList.add("hidden");
-          if (item.done) li.classList.add("done");
           if (item.isMoved) li.classList.add("is-moved");
 
-          const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.checked = item.done;
-          cb.disabled = item.isMoved;
-          cb.addEventListener("change", () => {
-            item.done = cb.checked;
+          const statusSel = document.createElement("select");
+          statusSel.className = "status-select";
+          statusSel.disabled = item.isMoved;
+          [
+            { value: "pending", icon: "⏳", label: "Pending" },
+            { value: "completed", icon: "✅", label: "Done" },
+            { value: "incomplete", icon: "❌", label: "Incomplete" },
+            { value: "notApplicable", icon: "➖", label: "N/A" }
+          ].forEach(opt => {
+            const op = document.createElement("option");
+            op.value = opt.value;
+            op.textContent = opt.icon + " " + opt.label;
+            if (status === opt.value) op.selected = true;
+            statusSel.appendChild(op);
+          });
+          statusSel.addEventListener("change", () => {
+            item.status = statusSel.value;
+            item.done = item.status === "completed";
             save();
           });
-          li.appendChild(cb);
+          li.appendChild(statusSel);
 
           if (item.freq === "daily") {
             const pass = document.createElement("button");
@@ -514,6 +531,7 @@
           li.appendChild(tools);
           ul.appendChild(li);
         });
+
         if (ul.querySelectorAll("li:not(.hidden)").length === 0 && currentFilter !== "All") return;
         card.appendChild(ul);
         board.appendChild(card);
@@ -606,9 +624,7 @@
       const wildcards = [];
       if (!state || !state.assignments) return;
       Object.values(state.assignments).forEach(day => {
-        day.forEach(item => {
-          if (item.wildcard) wildcards.push(item);
-        });
+        day.forEach(item => { if (item.wildcard) wildcards.push(item); });
       });
       if (wildcards.length === 0) return alert("No wildcard tasks");
       const lucky = wildcards[Math.floor(Math.random() * wildcards.length)];
