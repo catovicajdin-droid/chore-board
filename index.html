@@ -74,7 +74,6 @@
     .day-header h2 { font-size: 1rem; }
     .toggle-icon { font-size: 0.8rem; color: var(--muted); transition: transform 0.2s ease; }
 
-    /* Collapsible Logic */
     .day-card.collapsed .day-content { display: none; }
     .day-card.collapsed .toggle-icon { transform: rotate(-90deg); }
     .day-card.collapsed { padding-bottom: 10px; }
@@ -99,10 +98,10 @@
     .freq-tag { font-size: 0.65rem; color: var(--muted); background: var(--bg); padding: 2px 6px; border-radius: 4px; }
     .time-tag { font-size: 0.65rem; color: #4338ca; background: #eef2ff; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
 
-    .row-tools { display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 6px; padding-left: 30px; }
+    .row-tools { display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 6px; padding-left: 4px; }
     select:not(.status-select) { font-family: inherit; font-size: 0.75rem; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
 
-    .star-btn { font-size: 1.1rem; background: none; border: none; cursor: pointer; opacity: 0.2; padding: 0 4px; }
+    .star-btn { font-size: 1.1rem; background: none; border: none; cursor: pointer; opacity: 0.3; padding: 0 4px; filter: grayscale(1); }
     .star-btn.active { opacity: 1; filter: grayscale(0); }
     .pass-btn { font-size: 0.9rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #fde047; background: #fef9c3; cursor: pointer; }
     .pass-btn:disabled { opacity: 0.3; cursor: not-allowed; background: #f1f5f9; border-color: var(--border); }
@@ -259,8 +258,6 @@
     let state = null;
     let settings = { times: {}, goal: 100 };
     let currentFilter = "All";
-
-    // Track collapsed state locally
     let collapsedDays = {};
 
     function appearsThisWeek(t, weekNum) {
@@ -385,10 +382,7 @@
         card.className = "day-card";
         if (isToday) card.classList.add("today");
 
-        // Initial collapse state: collapse non-today days by default on first render
-        if (collapsedDays[day] === undefined) {
-           collapsedDays[day] = !isToday;
-        }
+        if (collapsedDays[day] === undefined) collapsedDays[day] = !isToday;
         if (collapsedDays[day]) card.classList.add("collapsed");
 
         if (isToday) {
@@ -504,6 +498,18 @@
 
           const tools = document.createElement("div");
           tools.className = "row-tools";
+
+          if (!locked && !item.isMoved) {
+            const star = document.createElement("button");
+            star.className = "star-btn" + (item.wildcard ? " active" : "");
+            star.textContent = "⭐";
+            star.addEventListener("click", () => {
+              item.wildcard = !item.wildcard;
+              save();
+            });
+            tools.appendChild(star);
+          }
+
           if (item.isMoved) {
             const lbl = document.createElement("span");
             lbl.className = "moved-label";
@@ -515,16 +521,6 @@
             undoBtn.onclick = () => undoMove(item, day);
             tools.appendChild(undoBtn);
           } else {
-            if (!locked) {
-              const star = document.createElement("button");
-              star.className = "star-btn" + (item.wildcard ? " active" : "");
-              star.textContent = "⭐";
-              star.addEventListener("click", () => {
-                item.wildcard = !item.wildcard;
-                save();
-              });
-              tools.appendChild(star);
-            }
             if (item.freq !== "daily") {
               const moveBtn = document.createElement("button");
               moveBtn.className = "push-btn";
@@ -605,11 +601,9 @@
     document.getElementById("todayBtn").addEventListener("click", () => {
       displayedWeek = realWeek;
       loadWeek(displayedWeek);
-      // Wait a moment for render to complete, then scroll
       setTimeout(() => {
         const todayCard = document.querySelector(".day-card.today");
         if (todayCard) {
-          // Expand today card if it was collapsed
           todayCard.classList.remove("collapsed");
           collapsedDays[DAYS[todayIndex]] = false;
           todayCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
