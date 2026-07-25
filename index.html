@@ -58,7 +58,7 @@
     .filter-btn.active.aiden { color: var(--aiden); }
 
     .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select) {
+    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select):not(.activate-btn) {
       font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
       border: 1px solid var(--border); border-radius: 8px;
       background: var(--card); color: var(--text); cursor: pointer;
@@ -111,8 +111,11 @@
     .moved-label { font-size: 0.7rem; color: #64748b; font-weight: bold; }
 
     .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 10px; }
-    .na-card h2 { font-size: 0.9rem; color: var(--muted); border: none; margin-bottom: 5px; }
-    .na-card li { color: var(--muted); font-size: 0.8rem; padding: 4px 0; border: none; }
+    .na-card h2 { font-size: 0.9rem; color: var(--muted); border: none; margin-bottom: 8px; }
+    .na-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .na-item:last-child { border-bottom: none; }
+    .na-text { font-size: 0.85rem; color: var(--muted); }
+    .activate-btn { font-size: 0.7rem; padding: 4px 8px; background: #fff; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; cursor: pointer; font-weight: bold; }
 
     .settings { padding-top: 10px; }
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
@@ -329,43 +332,6 @@
       set(ref(db, "board/week" + displayedWeek), state);
     }
 
-    async function moveTaskToNextWeek(item, currentDay) {
-      if (item.wasPushedFromPrev) return alert("Cannot move this task again!");
-      const nextW = displayedWeek + 1;
-      const nextSnap = await new Promise(resolve => {
-        onValue(ref(db, "board/week" + nextW), resolve, { onlyOnce: true });
-      });
-      let nextState = nextSnap.val();
-      if (!nextState) {
-        const startToggle = item.assignee === "Amy" ? 1 : 0;
-        nextState = generateWeek(nextW, startToggle);
-      }
-      const newId = item.taskId + "_moved_" + Date.now();
-      const movedItem = { ...item, id: newId, status: "pending", wasPushedFromPrev: true, pushedFromWeek: displayedWeek };
-      if (!nextState.assignments[currentDay]) nextState.assignments[currentDay] = [];
-      nextState.assignments[currentDay].push(movedItem);
-      await set(ref(db, "board/week" + nextW), nextState);
-      item.isMoved = true;
-      item.movedToId = newId;
-      item.status = "pending";
-      save();
-    }
-
-    async function undoMove(item, currentDay) {
-      const nextW = displayedWeek + 1;
-      const nextSnap = await new Promise(resolve => {
-        onValue(ref(db, "board/week" + nextW), resolve, { onlyOnce: true });
-      });
-      let nextState = nextSnap.val();
-      if (nextState && nextState.assignments[currentDay]) {
-        nextState.assignments[currentDay] = nextState.assignments[currentDay].filter(x => x.id !== item.movedToId);
-        await set(ref(db, "board/week" + nextW), nextState);
-      }
-      item.isMoved = false;
-      item.movedToId = null;
-      save();
-    }
-
     function render() {
       board.innerHTML = "";
       let amyPts = 0, aidenPts = 0;
@@ -485,9 +451,12 @@
 
           const locked = !!LOCKED[item.taskId];
           const badge = document.createElement("button");
-          badge.className = "assignee " + item.assignee.toLowerCase() + (locked ? " locked" : "");
-          badge.textContent = item.assignee + (locked ? " 🔒" : "");
-          if (!locked && !item.isMoved) {
+          // WILD CARD LOCK: If locked OR wildcard, show the locked style
+          const isActuallyLocked = locked || item.wildcard;
+          badge.className = "assignee " + item.assignee.toLowerCase() + (isActuallyLocked ? " locked" : "");
+          badge.textContent = item.assignee + (isActuallyLocked ? " 🔒" : "");
+
+          if (!isActuallyLocked && !item.isMoved) {
             badge.addEventListener("click", () => {
               item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy";
               save();
@@ -504,7 +473,14 @@
             star.className = "star-btn" + (item.wildcard ? " active" : "");
             star.textContent = "⭐";
             star.addEventListener("click", () => {
-              item.wildcard = !item.wildcard;
+              const newVal = !item.wildcard;
+              if (item.freq === "daily") {
+                Object.values(state.assignments).forEach(dayList => {
+                  dayList.forEach(t => { if (t.taskId === item.taskId) t.wildcard = newVal; });
+                });
+              } else {
+                item.wildcard = newVal;
+              }
               save();
             });
             tools.appendChild(star);
@@ -515,11 +491,6 @@
             lbl.className = "moved-label";
             lbl.textContent = "MOVED ⏭";
             tools.appendChild(lbl);
-            const undoBtn = document.createElement("button");
-            undoBtn.className = "undo-btn";
-            undoBtn.textContent = "Undo";
-            undoBtn.onclick = () => undoMove(item, day);
-            tools.appendChild(undoBtn);
           } else {
             if (item.freq !== "daily") {
               const moveBtn = document.createElement("button");
@@ -571,7 +542,33 @@
       if (notDueItems.length === 0) return;
       const card = document.createElement("div");
       card.className = "na-card";
-      card.innerHTML = `<h2>Not Due This Week</h2><ul>${notDueItems.map(t => `<li>${t.name} (${t.freq})</li>`).join('')}</ul>`;
+      const h = document.createElement("h2");
+      h.textContent = "Not Due This Week";
+      card.appendChild(h);
+
+      notDueItems.forEach(t => {
+        const div = document.createElement("div");
+        div.className = "na-item";
+        div.innerHTML = `
+          <span class="na-text">${t.name} (${t.freq})</span>
+          <button class="activate-btn">Activate +</button>
+        `;
+        div.querySelector(".activate-btn").onclick = () => {
+          if (!state.assignments["Nedjelja"]) state.assignments["Nedjelja"] = [];
+          state.assignments["Nedjelja"].push({
+            id: t.id + "_" + Date.now(),
+            taskId: t.id,
+            name: t.name,
+            freq: t.freq,
+            assignee: ASSIGNEES[0],
+            status: "pending",
+            wildcard: false,
+            manuallyActivated: true
+          });
+          save();
+        };
+        card.appendChild(div);
+      });
       board.appendChild(card);
     }
 
@@ -588,6 +585,27 @@
         });
         list.appendChild(row);
       });
+    }
+
+    async function moveTaskToNextWeek(item, currentDay) {
+      if (item.wasPushedFromPrev) return alert("Cannot move this task again!");
+      const nextW = displayedWeek + 1;
+      const nextSnap = await new Promise(resolve => {
+        onValue(ref(db, "board/week" + nextW), resolve, { onlyOnce: true });
+      });
+      let nextState = nextSnap.val();
+      if (!nextState) {
+        const startToggle = item.assignee === "Amy" ? 1 : 0;
+        nextState = generateWeek(nextW, startToggle);
+      }
+      const newId = item.taskId + "_moved_" + Date.now();
+      const movedItem = { ...item, id: newId, status: "pending", wasPushedFromPrev: true, pushedFromWeek: displayedWeek };
+      if (!nextState.assignments[currentDay]) nextState.assignments[currentDay] = [];
+      nextState.assignments[currentDay].push(movedItem);
+      await set(ref(db, "board/week" + nextW), nextState);
+      item.isMoved = true;
+      item.status = "pending";
+      save();
     }
 
     document.getElementById("viewToggle").addEventListener("click", () => {
@@ -626,10 +644,23 @@
       if (wildcards.length === 0) return alert("No wildcard tasks marked with ⭐");
       const lucky = wildcards[Math.floor(Math.random() * wildcards.length)];
       alert(lucky.assignee + " has been chosen for: " + lucky.name);
+
+      if (Notification.permission === "granted") {
+        new Notification("Wildcard Loser!", { body: lucky.assignee + " must do " + lucky.name });
+      }
     });
 
     document.getElementById("notifyBtn").addEventListener("click", () => {
-      Notification.requestPermission().then(p => { if (p === "granted") alert("Notifications enabled!"); });
+      if (!("Notification" in window)) return alert("This browser does not support notifications.");
+
+      Notification.requestPermission().then(p => {
+        if (p === "granted") {
+          alert("Notifications enabled! Note: On iPhone, you must use 'Add to Home Screen' for this to work.");
+          new Notification("Test Notification", { body: "Notifications are working!" });
+        } else {
+          alert("Notification permission was denied.");
+        }
+      });
     });
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
