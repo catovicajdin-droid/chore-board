@@ -58,7 +58,7 @@
     .filter-btn.active.aiden { color: var(--aiden); }
 
     .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select):not(.activate-btn):not(.del-btn):not(.test-notif-btn) {
+    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select):not(.activate-btn):not(.del-btn):not(.test-notif-btn):not(.day-select) {
       font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
       border: 1px solid var(--border); border-radius: 8px;
       background: var(--card); color: var(--text); cursor: pointer;
@@ -99,8 +99,10 @@
     .freq-tag { font-size: 0.65rem; color: var(--muted); background: var(--bg); padding: 2px 6px; border-radius: 4px; }
     .time-tag { font-size: 0.65rem; color: #4338ca; background: #eef2ff; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
 
-    .row-tools { display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 6px; padding-left: 4px; }
-    select:not(.status-select), input[type="number"], input[type="text"], input[type="time"] { font-family: inherit; font-size: 0.8rem; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+    .row-tools { display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 6px; padding-left: 4px; flex-wrap: wrap; }
+    select:not(.status-select), input[type="number"], input[type="text"], input[type="time"], .day-select {
+      font-family: inherit; font-size: 0.8rem; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: #fff;
+    }
 
     .star-btn { font-size: 1.1rem; background: none; border: none; cursor: pointer; opacity: 0.3; padding: 0 4px; filter: grayscale(1); }
     .star-btn.active { opacity: 1; filter: grayscale(0); }
@@ -194,7 +196,7 @@
       <h2>Notification Test</h2>
       <button id="testNotif" class="test-notif-btn">🧪 Test Notification Now</button>
       <div class="note">
-        <strong>Important:</strong> Instant tests work now. Reliable background reminders when the app is closed require adding to Home Screen (iOS) and may need a push server. This PWA currently uses foreground timers.
+        <strong>Important:</strong> On iOS, you must use "Add to Home Screen" to receive notifications. The app must be open or in background.
       </div>
     </div>
 
@@ -237,17 +239,14 @@
     const DAYS = ["Ponedjeljak","Utorak","Srijeda","Cetvrtak","Petak","Subota","Nedjelja"];
     const ASSIGNEES = ["Amy","Aiden"];
     const LOCKED = { "d4": "Aiden" };
-
-    // Default points for frequency categories
     const FREQ_POINTS = { daily: 1, weekly: 5, "2x weekly": 5, "3x weekly": 5, biweekly: 10, monthly: 15, quarterly: 20 };
 
     let state = null;
-    let settings = { times: {}, goal: 100, customTasks: [] };
+    let settings = { times: {}, goal: 100, customTasks: [], taskOverrides: {} };
     let currentFilter = "All";
     let collapsedDays = {};
     let lastNotifiedTime = "";
 
-    // Built-in tasks. We will edit these via settings.overrides if the user renames/changes points.
     const DEFAULT_BUILT_IN = [
       { id: "d1", name: "Sudje", freq: "daily" },
       { id: "d2", name: "Dorucak", freq: "daily" },
@@ -280,30 +279,20 @@
       { id: "q1", name: "Ciscenje odvoda", freq: "quarterly", days: [6] }
     ];
 
-    function getBuiltInTasks() {
-      const overrides = settings.taskOverrides || {};
-      return DEFAULT_BUILT_IN.map(t => {
-        if (overrides[t.id]) {
-          return { ...t, name: overrides[t.id].name || t.name, points: overrides[t.id].points };
-        }
-        return { ...t };
-      });
-    }
-
     function getAllTasks() {
-      return [...getBuiltInTasks(), ...(settings.customTasks || [])];
+      const builtIn = DEFAULT_BUILT_IN.map(t => {
+        const ov = (settings.taskOverrides || {})[t.id];
+        return ov ? { ...t, name: ov.name || t.name, points: ov.points } : t;
+      });
+      return [...builtIn, ...(settings.customTasks || [])];
     }
 
-    function getTaskById(id) {
-      return getAllTasks().find(t => t.id === id);
-    }
-
-    function getPoints(taskId, taskName, freq) {
-      const taskDef = getTaskById(taskId);
-      if (taskDef && taskDef.points) return parseInt(taskDef.points) || 0;
-      if (taskDef && FREQ_POINTS[taskDef.name]) return FREQ_POINTS[taskDef.name];
-      if (FREQ_POINTS[taskName]) return FREQ_POINTS[taskName];
-      return FREQ_POINTS[freq] || 0;
+    function getPoints(item) {
+      const taskDef = getAllTasks().find(t => t.id === item.taskId);
+      if (taskDef && taskDef.points) return parseInt(taskDef.points);
+      if (item.name === "Rucak") return 3;
+      if (["Sudje", "Dorucak", "Slaganje vesa", "Tuta", "Mijenjanje pijeska"].includes(item.name)) return 2;
+      return FREQ_POINTS[item.freq] || 1;
     }
 
     function getWeekNumber(d) {
@@ -355,15 +344,7 @@
       all.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
           const forced = LOCKED[t.id];
-          assignments[day].push({
-            id: t.id+"_"+day,
-            taskId: t.id,
-            name: t.name,
-            freq: t.freq,
-            assignee: forced || ASSIGNEES[toggle],
-            status: "pending",
-            wildcard: (t.id === "d1")
-          });
+          assignments[day].push({ id: t.id+"_"+day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], status: "pending", wildcard: (t.id === "d1") });
           if (!forced) toggle = 1 - toggle;
         });
       });
@@ -406,12 +387,7 @@
         if (collapsedDays[day]) card.classList.add("collapsed");
 
         if (isToday) card.innerHTML += `<div class="today-tag">DANAS</div>`;
-        card.innerHTML += `
-          <div class="day-header">
-            <div class="day-title">${day} ${hasWildcard ? '<span class="day-star">⭐</span>' : ''}</div>
-            <span class="toggle-icon">▼</span>
-          </div>
-        `;
+        card.innerHTML += `<div class="day-header"><div class="day-title">${day} ${hasWildcard ? '<span class="day-star">⭐</span>' : ''}</div><span class="toggle-icon">▼</span></div>`;
         card.querySelector(".day-header").onclick = () => { collapsedDays[day] = !collapsedDays[day]; card.classList.toggle("collapsed"); };
 
         const content = document.createElement("div");
@@ -421,14 +397,14 @@
         items.forEach(item => {
           const status = item.status || "pending";
           if (status === "completed" && !item.isMoved) {
-            const pts = getPoints(item.taskId, item.name, item.freq);
+            const pts = getPoints(item);
             if (item.assignee === "Amy") amyPts += pts; else aidenPts += pts;
           }
 
           const li = document.createElement("li");
           li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
 
-          li.innerHTML = `
+          const inner = `
             <select class="status-select">
                 <option value="pending" ${status==='pending'?'selected':''}>⏳ Pending</option>
                 <option value="completed" ${status==='completed'?'selected':''}>✅ Done</option>
@@ -444,6 +420,7 @@
                 ${item.freq!=='daily'?`<button class="push-btn">Move ⏭</button>`:''}
             </div>
           `;
+          li.innerHTML = inner;
 
           li.querySelector(".status-select").onchange = (e) => { item.status = e.target.value; save(); };
           li.querySelector(".star-btn").onclick = () => {
@@ -458,38 +435,68 @@
           if (!badge.classList.contains("locked")) {
             badge.onclick = () => { item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy"; save(); };
           }
+
+          if (item.freq !== 'daily') {
+             const tools = li.querySelector(".row-tools");
+             const sel = document.createElement("select");
+             sel.className = "day-select";
+             DAYS.forEach(d => {
+               const opt = document.createElement("option");
+               opt.value = d; opt.textContent = d;
+               if (d === day) opt.selected = true;
+               sel.appendChild(opt);
+             });
+             sel.onchange = () => {
+                const arr = state.assignments[day];
+                const i = arr.findIndex(x => x.id === item.id);
+                const [moved] = arr.splice(i, 1);
+                if (!state.assignments[sel.value]) state.assignments[sel.value] = [];
+                state.assignments[sel.value].push(moved);
+                save();
+             };
+             tools.appendChild(sel);
+             li.querySelector(".push-btn").onclick = () => moveTaskToNextWeek(item, day);
+          }
+
           ul.appendChild(li);
         });
-
-        content.appendChild(ul);
-        card.appendChild(content);
-        board.appendChild(card);
+        content.appendChild(ul); card.appendChild(content); board.appendChild(card);
       });
 
       renderNotDue();
+      const total = amyPts + aidenPts;
       document.getElementById("amyPoints").textContent = amyPts;
       document.getElementById("aidenPoints").textContent = aidenPts;
-      document.getElementById("totalPoints").textContent = amyPts + aidenPts;
-      document.getElementById("progressBar").style.width = Math.min(100, ((amyPts+aidenPts)/settings.goal)*100) + "%";
-      document.getElementById("rewardMsg").classList.toggle("active", (amyPts+aidenPts) >= settings.goal);
+      document.getElementById("totalPoints").textContent = total;
+      document.getElementById("progressBar").style.width = Math.min(100, (total/settings.goal)*100) + "%";
+      document.getElementById("rewardMsg").classList.toggle("active", total >= settings.goal);
+    }
+
+    async function moveTaskToNextWeek(item, day) {
+        const nextW = displayedWeek + 1;
+        const nextSnap = await new Promise(res => onValue(ref(db, "board/week" + nextW), res, {onlyOnce:true}));
+        let nextState = nextSnap.val();
+        if (!nextState) nextState = generateWeek(nextW, item.assignee === "Amy" ? 1 : 0);
+        if (!nextState.assignments[day]) nextState.assignments[day] = [];
+        nextState.assignments[day].push({ ...item, id: item.taskId+"_moved_"+Date.now(), status: "pending" });
+        await set(ref(db, "board/week" + nextW), nextState);
+        state.assignments[day] = state.assignments[day].filter(x => x.id !== item.id);
+        save();
     }
 
     function renderNotDue() {
-      // FIX: build active id set from all tasks that currently appear this week
       const activeIds = new Set(getAllTasks().filter(t => appearsThisWeek(t, displayedWeek)).map(t => t.id));
       const notDue = getAllTasks().filter(t => t.freq !== 'daily' && !activeIds.has(t.id));
       if (!notDue.length) return;
-
       const card = document.createElement("div");
-      card.className = "na-card";
-      card.innerHTML = `<h2>Not Due This Week</h2>`;
+      card.className = "na-card"; card.innerHTML = `<h2>Not Due This Week</h2>`;
       notDue.forEach(t => {
         const div = document.createElement("div");
         div.className = "na-item";
-        div.innerHTML = `<span class="na-text">${t.name} (${t.freq})</span><button class="activate-btn">Activate +</button>`;
+        div.innerHTML = `<span>${t.name} (${t.freq})</span><button class="activate-btn">Activate +</button>`;
         div.querySelector("button").onclick = () => {
           if(!state.assignments["Nedjelja"]) state.assignments["Nedjelja"] = [];
-          state.assignments["Nedjelja"].push({ id: t.id+"_act_"+Date.now(), taskId: t.id, name: t.name, freq: t.freq, assignee: "Amy", status: "pending" });
+          state.assignments["Nedjelja"].push({ id: t.id+"_act", taskId: t.id, name: t.name, freq: t.freq, assignee: "Amy", status: "pending" });
           save();
         };
         card.appendChild(div);
@@ -498,51 +505,34 @@
     }
 
     function renderSettings() {
-      const list = document.getElementById("settingsList");
-      list.innerHTML = "";
+      const list = document.getElementById("settingsList"); list.innerHTML = "";
       getAllTasks().forEach(t => {
-        const row = document.createElement("div");
-        row.className = "set-row";
+        const row = document.createElement("div"); row.className = "set-row";
         row.innerHTML = `<span>${t.name}</span><input type="time" value="${settings.times[t.id] || ""}">`;
         row.querySelector("input").onchange = (e) => { settings.times[t.id] = e.target.value; set(ref(db, "settings"), settings); };
         list.appendChild(row);
       });
 
-      const edit = document.getElementById("taskListEditor");
-      edit.innerHTML = "";
-      const builtIn = getBuiltInTasks();
-      builtIn.forEach(t => {
-        const row = document.createElement("div");
-        row.className = "set-row";
-        row.innerHTML = `
-            <input type="text" value="${t.name}" data-id="${t.id}" style="flex:1; font-weight:bold;">
-            <input type="number" class="pts-input" value="${getPoints(t.id, t.name, t.freq)}" data-id="${t.id}">
-            <span style="font-size:0.7rem; color:var(--muted);">Built-in</span>
-        `;
-        row.querySelectorAll("input").forEach(inp => {
-          inp.onchange = () => {
-            const id = inp.dataset.id;
-            const nameInput = row.querySelector('input[type="text"]');
-            const ptsInput = row.querySelector('input[type="number"]');
+      const edit = document.getElementById("taskListEditor"); edit.innerHTML = "";
+      // Built-in editor
+      DEFAULT_BUILT_IN.forEach(t => {
+        const ov = (settings.taskOverrides || {})[t.id] || { name: t.name, points: getPoints(t) };
+        const row = document.createElement("div"); row.className = "set-row";
+        row.innerHTML = `<input type="text" value="${ov.name}" style="flex:1;"><input type="number" class="pts-input" value="${ov.points}"><span>Built-in</span>`;
+        row.querySelectorAll("input").forEach(i => i.onchange = () => {
             settings.taskOverrides = settings.taskOverrides || {};
-            settings.taskOverrides[id] = { name: nameInput.value, points: ptsInput.value };
+            settings.taskOverrides[t.id] = { name: row.querySelector('input[type="text"]').value, points: row.querySelector('input[type="number"]').value };
             set(ref(db, "settings"), settings);
-          };
         });
         edit.appendChild(row);
       });
-
+      // Custom task editor
       (settings.customTasks || []).forEach((t, i) => {
-        const row = document.createElement("div");
-        row.className = "set-row";
-        row.innerHTML = `
-            <input type="text" value="${t.name}" style="flex:1; font-weight:bold;">
-            <input type="number" class="pts-input" value="${t.points || 1}">
-            <button class="del-btn">DEL</button>
-        `;
+        const row = document.createElement("div"); row.className = "set-row";
+        row.innerHTML = `<input type="text" value="${t.name}" style="flex:1;"><input type="number" class="pts-input" value="${t.points}"><button class="del-btn">DEL</button>`;
         row.querySelector('input[type="text"]').onchange = (e) => { settings.customTasks[i].name = e.target.value; set(ref(db, "settings"), settings); };
         row.querySelector('input[type="number"]').onchange = (e) => { settings.customTasks[i].points = e.target.value; set(ref(db, "settings"), settings); };
-        row.querySelector(".del-btn").onclick = () => { if(confirm("Delete this task type?")) { settings.customTasks.splice(i, 1); set(ref(db, "settings"), settings); } };
+        row.querySelector(".del-btn").onclick = () => { settings.customTasks.splice(i,1); set(ref(db, "settings"), settings); };
         edit.appendChild(row);
       });
     }
@@ -551,37 +541,28 @@
       const now = new Date();
       const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
       if (currentTime === lastNotifiedTime) return;
-
       getAllTasks().forEach(t => {
-        if (settings.times[t.id] === currentTime) {
-          if (Notification.permission === "granted") {
-            new Notification("Chore Time!", { body: `Don't forget: ${t.name}`, icon: "https://cdn-icons-png.flaticon.com/512/1048/1048953.png" });
+        if (settings.times[t.id] === currentTime && Notification.permission === "granted") {
+            new Notification("Chore Reminder", { body: `It's time for: ${t.name}` });
             lastNotifiedTime = currentTime;
-          }
         }
       });
     }
     setInterval(checkScheduledTasks, 30000);
 
     document.getElementById("testNotif").onclick = () => {
-      if (!("Notification" in window)) return alert("This browser does not support notifications.");
-      if (Notification.permission !== "granted") {
+        if (!("Notification" in window)) return alert("Not supported.");
         Notification.requestPermission().then(p => {
-            if (p === "granted") new Notification("Test!", { body: "Notifications are working." });
-            else alert("Please enable notifications first.");
+            if (p === "granted") new Notification("Test Success!", { body: "Your notifications are enabled." });
+            else alert("Permission denied.");
         });
-      } else {
-        new Notification("Test Notification", { body: "If you see this, notifications are set up correctly." });
-      }
     };
 
     document.getElementById("addTaskBtn").onclick = () => {
       const name = document.getElementById("newTaskName").value;
-      const pts = document.getElementById("newTaskPts").value;
       if (!name) return;
-      const t = { id: "cust_" + Date.now(), name, freq: document.getElementById("newTaskFreq").value, points: pts };
       settings.customTasks = settings.customTasks || [];
-      settings.customTasks.push(t);
+      settings.customTasks.push({ id: "cust_"+Date.now(), name, freq: document.getElementById("newTaskFreq").value, points: document.getElementById("newTaskPts").value });
       set(ref(db, "settings"), settings);
       document.getElementById("newTaskName").value = "";
     };
@@ -592,49 +573,36 @@
     };
 
     document.getElementById("notifyBtn").onclick = () => {
-      Notification.requestPermission().then(p => {
-        if (p === "granted") {
-            new Notification("Notifications Enabled!", { body: "You will receive alerts at set chore times." });
-            alert("Success! Alerts are on.");
-        }
-      });
+      Notification.requestPermission().then(p => { if(p==="granted") alert("Notifications active!"); });
     };
 
     document.getElementById("todayBtn").onclick = () => {
-      displayedWeek = realWeek;
-      loadWeek(displayedWeek);
+      displayedWeek = realWeek; loadWeek(displayedWeek);
       setTimeout(() => {
         const card = document.querySelector(".day-card.today");
-        if (card) {
-            card.classList.remove("collapsed");
-            collapsedDays[DAYS[todayIndex]] = false;
-            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        if(card){ card.classList.remove("collapsed"); card.scrollIntoView({ behavior:'smooth', block:'start' }); }
       }, 200);
     };
 
     document.getElementById("wildcardBtn").onclick = () => {
       const list = [];
       Object.values(state.assignments).forEach(d => d.forEach(t => { if(t.wildcard) list.push(t); }));
-      if (!list.length) return alert("No wildcards set!");
+      if(!list.length) return alert("No wildcards!");
       const lucky = list[Math.floor(Math.random()*list.length)];
-      alert(`${lucky.assignee} has been assigned: ${lucky.name}`);
-      if (Notification.permission === "granted") new Notification("Wildcard Results", { body: `${lucky.assignee} must do ${lucky.name}` });
+      alert(`${lucky.assignee} does ${lucky.name}`);
     };
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
       btn.onclick = () => {
         document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        currentFilter = btn.dataset.filter;
-        render();
+        btn.classList.add("active"); currentFilter = btn.dataset.filter; render();
       };
     });
 
-    document.getElementById("goalInput").onchange = (e) => { settings.goal = parseInt(e.target.value) || 100; set(ref(db, "settings"), settings); };
+    document.getElementById("goalInput").onchange = (e) => { settings.goal = parseInt(e.target.value); set(ref(db, "settings"), settings); };
     document.getElementById("prevWeek").onclick = () => { displayedWeek--; loadWeek(displayedWeek); };
     document.getElementById("nextWeek").onclick = () => { displayedWeek++; loadWeek(displayedWeek); };
-    document.getElementById("reassign").onclick = () => { if(confirm("Reset progress and reassign?")) { state = generateWeek(displayedWeek); save(); } };
+    document.getElementById("reassign").onclick = () => { if(confirm("Reassign week?")) { state = generateWeek(displayedWeek); save(); } };
 
     loadWeek(displayedWeek);
   </script>
