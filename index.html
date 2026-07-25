@@ -99,13 +99,7 @@
     .time-tag { font-size: 0.65rem; color: #4338ca; background: #eef2ff; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
 
     .row-tools { display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 6px; padding-left: 4px; }
-    select:not(.status-select) { font-family: inherit; font-size: 0.75rem; padding: 4px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
-
-    .star-btn { font-size: 1.1rem; background: none; border: none; cursor: pointer; opacity: 0.3; padding: 0 4px; filter: grayscale(1); }
-    .star-btn.active { opacity: 1; filter: grayscale(0); }
-    .pass-btn { font-size: 0.9rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #fde047; background: #fef9c3; cursor: pointer; }
-    .pass-btn:disabled { opacity: 0.3; cursor: not-allowed; background: #f1f5f9; border-color: var(--border); }
-    .push-btn { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
+    select:not(.status-select), input[type="number"], input[type="text"] { font-family: inherit; font-size: 0.8rem; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
 
     .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 10px; }
     .na-card h2 { font-size: 0.9rem; color: var(--muted); border: none; margin-bottom: 8px; }
@@ -115,10 +109,11 @@
 
     .settings { padding-top: 10px; }
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
-    .set-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
     .task-manager { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
-    .add-task-form { display: grid; gap: 8px; background: #f1f5f9; padding: 12px; border-radius: 8px; }
-    .del-btn { color: #dc2626; border: none; background: none; font-weight: bold; cursor: pointer; }
+    .add-task-form { display: grid; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 8px; }
+    .del-btn { color: #dc2626; border: 1px solid #dc2626; background: #fef2f2; font-weight: bold; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; }
+    .pts-input { width: 50px; text-align: center; }
   </style>
 </head>
 <body>
@@ -187,18 +182,21 @@
     </div>
 
     <div class="set-card task-manager">
-      <h2>Manage All Tasks</h2>
+      <h2>Manage Tasks & Points</h2>
       <div class="add-task-form">
         <input type="text" id="newTaskName" placeholder="Task Name">
-        <select id="newTaskFreq">
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="biweekly">Bi-Weekly</option>
-            <option value="monthly">Monthly</option>
-        </select>
+        <div style="display:flex; gap:8px;">
+            <select id="newTaskFreq" style="flex:1;">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Bi-Weekly</option>
+                <option value="monthly">Monthly</option>
+            </select>
+            <input type="number" id="newTaskPts" class="pts-input" placeholder="Pts" value="1">
+        </div>
         <button id="addTaskBtn" class="primary">Add New Task</button>
       </div>
-      <div id="taskListEditor" style="margin-top:12px;"></div>
+      <div id="taskListEditor" style="margin-top:16px;"></div>
     </div>
   </div>
 
@@ -223,7 +221,6 @@
     const ASSIGNEES = ["Amy","Aiden"];
     const LOCKED = { "d4": "Aiden" };
 
-    // Explicit overrides for certain tasks
     const POINTS_CONFIG = {
       "Sudje": 2, "Dorucak": 2, "Rucak": 3, "Slaganje vesa": 2, "Masina za ves/susilica": 3,
       "Tuta": 2, "Mijenjanje pijeska": 2,
@@ -236,7 +233,6 @@
     let collapsedDays = {};
     let lastNotifiedTime = "";
 
-    // Default built-in tasks (merged with custom ones later)
     const BUILT_IN_TASKS = [
       { id: "d1", name: "Sudje", freq: "daily" },
       { id: "d2", name: "Dorucak", freq: "daily" },
@@ -308,7 +304,15 @@
       all.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
           const forced = LOCKED[t.id];
-          assignments[day].push({ id: t.id+"_"+day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], status: "pending", wildcard: (t.id === "d1") });
+          assignments[day].push({
+            id: t.id+"_"+day,
+            taskId: t.id,
+            name: t.name,
+            freq: t.freq,
+            assignee: forced || ASSIGNEES[toggle],
+            status: "pending",
+            wildcard: (t.id === "d1")
+          });
           if (!forced) toggle = 1 - toggle;
         });
       });
@@ -341,7 +345,6 @@
         const items = state.assignments[day] || [];
         const visibleItems = currentFilter === "All" ? items : items.filter(i => i.assignee === currentFilter);
         if (visibleItems.length === 0 && currentFilter !== "All") return;
-        if (items.length === 0) return;
 
         const isToday = dayIdx === todayIndex && displayedWeek === realWeek;
         const card = document.createElement("div");
@@ -360,7 +363,10 @@
         items.forEach(item => {
           const status = item.status || "pending";
           if (status === "completed" && !item.isMoved) {
-            const pts = POINTS_CONFIG[item.name] || POINTS_CONFIG[item.freq] || 0;
+            // POINT LOGIC: Task defined points > Overrides > Frequency default
+            const taskDef = getAllTasks().find(t => t.id === item.taskId);
+            const pts = (taskDef && taskDef.points) ? parseInt(taskDef.points) : (POINTS_CONFIG[item.name] || POINTS_CONFIG[item.freq] || 0);
+
             if (item.assignee === "Amy") amyPts += pts; else aidenPts += pts;
           }
 
@@ -397,7 +403,6 @@
           if (!badge.classList.contains("locked")) {
             badge.onclick = () => { item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy"; save(); };
           }
-
           ul.appendChild(li);
         });
 
@@ -452,36 +457,43 @@
       (settings.customTasks || []).forEach((t, i) => {
         const row = document.createElement("div");
         row.className = "set-row";
-        row.innerHTML = `<span>${t.name}</span><button class="del-btn">Delete</button>`;
-        row.querySelector(".del-btn").onclick = () => { settings.customTasks.splice(i, 1); set(ref(db, "settings"), settings); };
+        row.innerHTML = `
+            <div style="flex:1;">
+                <div style="font-weight:bold;">${t.name}</div>
+                <div style="font-size:0.7rem; color:var(--muted);">${t.freq}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <input type="number" class="pts-input" value="${t.points || 1}" style="width:45px;">
+                <button class="del-btn">DEL</button>
+            </div>
+        `;
+        row.querySelector("input").onchange = (e) => { settings.customTasks[i].points = e.target.value; set(ref(db, "settings"), settings); };
+        row.querySelector(".del-btn").onclick = () => { if(confirm("Delete this task type?")) { settings.customTasks.splice(i, 1); set(ref(db, "settings"), settings); } };
         edit.appendChild(row);
       });
     }
 
-    // --- NOTIFICATION ENGINE ---
     function checkScheduledTasks() {
       const now = new Date();
       const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-
       if (currentTime === lastNotifiedTime) return;
 
-      const all = getAllTasks();
-      all.forEach(t => {
+      getAllTasks().forEach(t => {
         if (settings.times[t.id] === currentTime) {
           if (Notification.permission === "granted") {
-            new Notification("Chore Reminder!", { body: `It's time for: ${t.name}`, icon: "https://cdn-icons-png.flaticon.com/512/1048/1048953.png" });
+            new Notification("Chore Time!", { body: `Don't forget: ${t.name}`, icon: "https://cdn-icons-png.flaticon.com/512/1048/1048953.png" });
             lastNotifiedTime = currentTime;
           }
         }
       });
     }
-
-    setInterval(checkScheduledTasks, 60000); // Check every minute
+    setInterval(checkScheduledTasks, 30000);
 
     document.getElementById("addTaskBtn").onclick = () => {
       const name = document.getElementById("newTaskName").value;
+      const pts = document.getElementById("newTaskPts").value;
       if (!name) return;
-      const t = { id: "cust_" + Date.now(), name, freq: document.getElementById("newTaskFreq").value };
+      const t = { id: "cust_" + Date.now(), name, freq: document.getElementById("newTaskFreq").value, points: pts };
       settings.customTasks = settings.customTasks || [];
       settings.customTasks.push(t);
       set(ref(db, "settings"), settings);
@@ -496,7 +508,7 @@
     document.getElementById("notifyBtn").onclick = () => {
       Notification.requestPermission().then(p => {
         if (p === "granted") {
-            new Notification("Notifications Enabled!", { body: "You will now receive alerts for chores." });
+            new Notification("Notifications Enabled!", { body: "Chore alerts are now active." });
             alert("Success! Alerts are on.");
         }
       });
@@ -521,7 +533,7 @@
       if (!list.length) return alert("No wildcards set!");
       const lucky = list[Math.floor(Math.random()*list.length)];
       alert(`${lucky.assignee} has been assigned: ${lucky.name}`);
-      if (Notification.permission === "granted") new Notification("Wildcard Selected!", { body: `${lucky.assignee} must do ${lucky.name}` });
+      if (Notification.permission === "granted") new Notification("Wildcard Results", { body: `${lucky.assignee} must do ${lucky.name}` });
     };
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
