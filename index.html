@@ -58,7 +58,7 @@
     .filter-btn.active.aiden { color: var(--aiden); }
 
     .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select):not(.activate-btn):not(.del-btn) {
+    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select):not(.activate-btn):not(.del-btn):not(.test-notif-btn) {
       font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
       border: 1px solid var(--border); border-radius: 8px;
       background: var(--card); color: var(--text); cursor: pointer;
@@ -71,7 +71,8 @@
     .today-tag { position: absolute; top: -10px; right: 10px; background: var(--accent); color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 999px; }
 
     .day-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 8px; user-select: none; }
-    .day-header h2 { font-size: 1rem; }
+    .day-title { display: flex; align-items: center; gap: 6px; font-size: 1rem; font-weight: bold; }
+    .day-star { color: #f59e0b; font-size: 0.9rem; }
     .toggle-icon { font-size: 0.8rem; color: var(--muted); transition: transform 0.2s ease; }
 
     .day-card.collapsed .day-content { display: none; }
@@ -99,7 +100,13 @@
     .time-tag { font-size: 0.65rem; color: #4338ca; background: #eef2ff; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
 
     .row-tools { display: flex; gap: 10px; align-items: center; width: 100%; margin-top: 6px; padding-left: 4px; }
-    select:not(.status-select), input[type="number"], input[type="text"] { font-family: inherit; font-size: 0.8rem; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+    select:not(.status-select), input[type="number"], input[type="text"], input[type="time"] { font-family: inherit; font-size: 0.8rem; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+
+    .star-btn { font-size: 1.1rem; background: none; border: none; cursor: pointer; opacity: 0.3; padding: 0 4px; filter: grayscale(1); }
+    .star-btn.active { opacity: 1; filter: grayscale(0); }
+    .pass-btn { font-size: 0.9rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #fde047; background: #fef9c3; cursor: pointer; }
+    .pass-btn:disabled { opacity: 0.3; cursor: not-allowed; background: #f1f5f9; border-color: var(--border); }
+    .push-btn { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
 
     .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 10px; }
     .na-card h2 { font-size: 0.9rem; color: var(--muted); border: none; margin-bottom: 8px; }
@@ -111,9 +118,11 @@
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
     .task-manager { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
-    .add-task-form { display: grid; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 8px; }
+    .add-task-form { display: grid; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
     .del-btn { color: #dc2626; border: 1px solid #dc2626; background: #fef2f2; font-weight: bold; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; }
-    .pts-input { width: 50px; text-align: center; }
+    .pts-input { width: 55px; text-align: center; }
+    .test-notif-btn { margin-top: 10px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 6px; padding: 8px 12px; cursor: pointer; width: 100%; font-weight: bold; }
+    .note { font-size: 0.75rem; color: var(--muted); line-height: 1.4; margin-top: 6px; padding: 8px; background: #f1f5f9; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -181,6 +190,14 @@
       <div id="settingsList"></div>
     </div>
 
+    <div class="set-card">
+      <h2>Notification Test</h2>
+      <button id="testNotif" class="test-notif-btn">🧪 Test Notification Now</button>
+      <div class="note">
+        <strong>Important:</strong> Instant tests work now. Reliable background reminders when the app is closed require adding to Home Screen (iOS) and may need a push server. This PWA currently uses foreground timers.
+      </div>
+    </div>
+
     <div class="set-card task-manager">
       <h2>Manage Tasks & Points</h2>
       <div class="add-task-form">
@@ -196,7 +213,7 @@
         </div>
         <button id="addTaskBtn" class="primary">Add New Task</button>
       </div>
-      <div id="taskListEditor" style="margin-top:16px;"></div>
+      <div id="taskListEditor" style="margin-top:6px;"></div>
     </div>
   </div>
 
@@ -221,11 +238,8 @@
     const ASSIGNEES = ["Amy","Aiden"];
     const LOCKED = { "d4": "Aiden" };
 
-    const POINTS_CONFIG = {
-      "Sudje": 2, "Dorucak": 2, "Rucak": 3, "Slaganje vesa": 2, "Masina za ves/susilica": 3,
-      "Tuta": 2, "Mijenjanje pijeska": 2,
-      daily: 1, weekly: 5, biweekly: 10, monthly: 15, quarterly: 20
-    };
+    // Default points for frequency categories
+    const FREQ_POINTS = { daily: 1, weekly: 5, "2x weekly": 5, "3x weekly": 5, biweekly: 10, monthly: 15, quarterly: 20 };
 
     let state = null;
     let settings = { times: {}, goal: 100, customTasks: [] };
@@ -233,7 +247,8 @@
     let collapsedDays = {};
     let lastNotifiedTime = "";
 
-    const BUILT_IN_TASKS = [
+    // Built-in tasks. We will edit these via settings.overrides if the user renames/changes points.
+    const DEFAULT_BUILT_IN = [
       { id: "d1", name: "Sudje", freq: "daily" },
       { id: "d2", name: "Dorucak", freq: "daily" },
       { id: "d3", name: "Rucak", freq: "daily" },
@@ -246,13 +261,49 @@
       { id: "d10", name: "Punjenje elektronike", freq: "daily" },
       { id: "d11", name: "Mijenjanje pijeska", freq: "daily" },
       { id: "m1", name: "Ribanje sporeta", freq: "2x weekly", days: [1,4] },
+      { id: "m2", name: "Mini-grocery", freq: "2x weekly", days: [2,5] },
+      { id: "m3", name: "Usisavanje", freq: "2x weekly", days: [3,6] },
+      { id: "m4", name: "Bacanje smeca", freq: "2x weekly", days: [0,3] },
       { id: "m5", name: "Ciscenje wc-a", freq: "3x weekly", days: [1,3,5] },
       { id: "w1", name: "Zalijevanje cvijeca", freq: "weekly", days: [5] },
-      { id: "b1", name: "Mijenjanje posteljine", freq: "biweekly", days: [5] }
+      { id: "w2", name: "WC generalka", freq: "weekly", days: [6] },
+      { id: "b1", name: "Mijenjanje posteljine", freq: "biweekly", days: [5] },
+      { id: "mo1", name: "Pranje rerne", freq: "monthly", days: [5] },
+      { id: "mo2", name: "Pranje prozora", freq: "monthly", days: [6] },
+      { id: "mo3", name: "Pranje balkona", freq: "monthly", days: [5] },
+      { id: "mo4", name: "Ciscenje ostave", freq: "monthly", days: [6] },
+      { id: "mo5", name: "Usisavanje iza namjestaja", freq: "monthly", days: [5] },
+      { id: "mo6", name: "Pranje usisivaca", freq: "monthly", days: [6] },
+      { id: "mo7", name: "Pranje auta", freq: "monthly", days: [5] },
+      { id: "mo8", name: "Ciscenje frizidera", freq: "monthly", days: [6] },
+      { id: "mo9", name: "Placanje racuna", freq: "monthly", days: [5] },
+      { id: "q1", name: "Ciscenje odvoda", freq: "quarterly", days: [6] }
     ];
 
+    function getBuiltInTasks() {
+      const overrides = settings.taskOverrides || {};
+      return DEFAULT_BUILT_IN.map(t => {
+        if (overrides[t.id]) {
+          return { ...t, name: overrides[t.id].name || t.name, points: overrides[t.id].points };
+        }
+        return { ...t };
+      });
+    }
+
     function getAllTasks() {
-      return [...BUILT_IN_TASKS, ...(settings.customTasks || [])];
+      return [...getBuiltInTasks(), ...(settings.customTasks || [])];
+    }
+
+    function getTaskById(id) {
+      return getAllTasks().find(t => t.id === id);
+    }
+
+    function getPoints(taskId, taskName, freq) {
+      const taskDef = getTaskById(taskId);
+      if (taskDef && taskDef.points) return parseInt(taskDef.points) || 0;
+      if (taskDef && FREQ_POINTS[taskDef.name]) return FREQ_POINTS[taskDef.name];
+      if (FREQ_POINTS[taskName]) return FREQ_POINTS[taskName];
+      return FREQ_POINTS[freq] || 0;
     }
 
     function getWeekNumber(d) {
@@ -269,7 +320,7 @@
     let displayedWeek = realWeek;
 
     onValue(ref(db, "settings"), (snap) => {
-      settings = Object.assign({ times: {}, goal: 100, customTasks: [] }, snap.val());
+      settings = Object.assign({ times: {}, goal: 100, customTasks: [], taskOverrides: {} }, snap.val());
       document.getElementById("goalInput").value = settings.goal;
       document.getElementById("goalText").textContent = settings.goal;
       if (state) render();
@@ -331,6 +382,7 @@
       if (t.freq.includes("weekly")) return true;
       if (t.freq === "biweekly") return weekNum % 2 === 0;
       if (t.freq === "monthly") return weekNum % 4 === 1;
+      if (t.freq === "quarterly") return weekNum % 12 === 1;
       return true;
     }
 
@@ -347,13 +399,19 @@
         if (visibleItems.length === 0 && currentFilter !== "All") return;
 
         const isToday = dayIdx === todayIndex && displayedWeek === realWeek;
+        const hasWildcard = items.some(i => i.wildcard);
         const card = document.createElement("div");
         card.className = "day-card" + (isToday ? " today" : "");
         if (collapsedDays[day] === undefined) collapsedDays[day] = !isToday;
         if (collapsedDays[day]) card.classList.add("collapsed");
 
         if (isToday) card.innerHTML += `<div class="today-tag">DANAS</div>`;
-        card.innerHTML += `<div class="day-header"><h2>${day}</h2><span class="toggle-icon">▼</span></div>`;
+        card.innerHTML += `
+          <div class="day-header">
+            <div class="day-title">${day} ${hasWildcard ? '<span class="day-star">⭐</span>' : ''}</div>
+            <span class="toggle-icon">▼</span>
+          </div>
+        `;
         card.querySelector(".day-header").onclick = () => { collapsedDays[day] = !collapsedDays[day]; card.classList.toggle("collapsed"); };
 
         const content = document.createElement("div");
@@ -363,10 +421,7 @@
         items.forEach(item => {
           const status = item.status || "pending";
           if (status === "completed" && !item.isMoved) {
-            // POINT LOGIC: Task defined points > Overrides > Frequency default
-            const taskDef = getAllTasks().find(t => t.id === item.taskId);
-            const pts = (taskDef && taskDef.points) ? parseInt(taskDef.points) : (POINTS_CONFIG[item.name] || POINTS_CONFIG[item.freq] || 0);
-
+            const pts = getPoints(item.taskId, item.name, item.freq);
             if (item.assignee === "Amy") amyPts += pts; else aidenPts += pts;
           }
 
@@ -420,6 +475,7 @@
     }
 
     function renderNotDue() {
+      // FIX: build active id set from all tasks that currently appear this week
       const activeIds = new Set(getAllTasks().filter(t => appearsThisWeek(t, displayedWeek)).map(t => t.id));
       const notDue = getAllTasks().filter(t => t.freq !== 'daily' && !activeIds.has(t.id));
       if (!notDue.length) return;
@@ -433,7 +489,7 @@
         div.innerHTML = `<span class="na-text">${t.name} (${t.freq})</span><button class="activate-btn">Activate +</button>`;
         div.querySelector("button").onclick = () => {
           if(!state.assignments["Nedjelja"]) state.assignments["Nedjelja"] = [];
-          state.assignments["Nedjelja"].push({ id: t.id+"_act", taskId: t.id, name: t.name, freq: t.freq, assignee: "Amy", status: "pending" });
+          state.assignments["Nedjelja"].push({ id: t.id+"_act_"+Date.now(), taskId: t.id, name: t.name, freq: t.freq, assignee: "Amy", status: "pending" });
           save();
         };
         card.appendChild(div);
@@ -454,20 +510,38 @@
 
       const edit = document.getElementById("taskListEditor");
       edit.innerHTML = "";
+      const builtIn = getBuiltInTasks();
+      builtIn.forEach(t => {
+        const row = document.createElement("div");
+        row.className = "set-row";
+        row.innerHTML = `
+            <input type="text" value="${t.name}" data-id="${t.id}" style="flex:1; font-weight:bold;">
+            <input type="number" class="pts-input" value="${getPoints(t.id, t.name, t.freq)}" data-id="${t.id}">
+            <span style="font-size:0.7rem; color:var(--muted);">Built-in</span>
+        `;
+        row.querySelectorAll("input").forEach(inp => {
+          inp.onchange = () => {
+            const id = inp.dataset.id;
+            const nameInput = row.querySelector('input[type="text"]');
+            const ptsInput = row.querySelector('input[type="number"]');
+            settings.taskOverrides = settings.taskOverrides || {};
+            settings.taskOverrides[id] = { name: nameInput.value, points: ptsInput.value };
+            set(ref(db, "settings"), settings);
+          };
+        });
+        edit.appendChild(row);
+      });
+
       (settings.customTasks || []).forEach((t, i) => {
         const row = document.createElement("div");
         row.className = "set-row";
         row.innerHTML = `
-            <div style="flex:1;">
-                <div style="font-weight:bold;">${t.name}</div>
-                <div style="font-size:0.7rem; color:var(--muted);">${t.freq}</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <input type="number" class="pts-input" value="${t.points || 1}" style="width:45px;">
-                <button class="del-btn">DEL</button>
-            </div>
+            <input type="text" value="${t.name}" style="flex:1; font-weight:bold;">
+            <input type="number" class="pts-input" value="${t.points || 1}">
+            <button class="del-btn">DEL</button>
         `;
-        row.querySelector("input").onchange = (e) => { settings.customTasks[i].points = e.target.value; set(ref(db, "settings"), settings); };
+        row.querySelector('input[type="text"]').onchange = (e) => { settings.customTasks[i].name = e.target.value; set(ref(db, "settings"), settings); };
+        row.querySelector('input[type="number"]').onchange = (e) => { settings.customTasks[i].points = e.target.value; set(ref(db, "settings"), settings); };
         row.querySelector(".del-btn").onclick = () => { if(confirm("Delete this task type?")) { settings.customTasks.splice(i, 1); set(ref(db, "settings"), settings); } };
         edit.appendChild(row);
       });
@@ -489,6 +563,18 @@
     }
     setInterval(checkScheduledTasks, 30000);
 
+    document.getElementById("testNotif").onclick = () => {
+      if (!("Notification" in window)) return alert("This browser does not support notifications.");
+      if (Notification.permission !== "granted") {
+        Notification.requestPermission().then(p => {
+            if (p === "granted") new Notification("Test!", { body: "Notifications are working." });
+            else alert("Please enable notifications first.");
+        });
+      } else {
+        new Notification("Test Notification", { body: "If you see this, notifications are set up correctly." });
+      }
+    };
+
     document.getElementById("addTaskBtn").onclick = () => {
       const name = document.getElementById("newTaskName").value;
       const pts = document.getElementById("newTaskPts").value;
@@ -508,7 +594,7 @@
     document.getElementById("notifyBtn").onclick = () => {
       Notification.requestPermission().then(p => {
         if (p === "granted") {
-            new Notification("Notifications Enabled!", { body: "Chore alerts are now active." });
+            new Notification("Notifications Enabled!", { body: "You will receive alerts at set chore times." });
             alert("Success! Alerts are on.");
         }
       });
@@ -545,6 +631,7 @@
       };
     });
 
+    document.getElementById("goalInput").onchange = (e) => { settings.goal = parseInt(e.target.value) || 100; set(ref(db, "settings"), settings); };
     document.getElementById("prevWeek").onclick = () => { displayedWeek--; loadWeek(displayedWeek); };
     document.getElementById("nextWeek").onclick = () => { displayedWeek++; loadWeek(displayedWeek); };
     document.getElementById("reassign").onclick = () => { if(confirm("Reset progress and reassign?")) { state = generateWeek(displayedWeek); save(); } };
