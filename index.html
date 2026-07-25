@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#4f46e5">
   <link rel="manifest" href="manifest.json">
-  <title>Chore Board</title>
+  <title>Chore Board Pro</title>
   <style>
     :root {
       --amy: #ec4899; --aiden: #3b82f6; --bg: #f8fafc;
@@ -58,7 +58,7 @@
     .filter-btn.active.aiden { color: var(--aiden); }
 
     .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select):not(.activate-btn) {
+    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select):not(.activate-btn):not(.del-btn) {
       font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
       border: 1px solid var(--border); border-radius: 8px;
       background: var(--card); color: var(--text); cursor: pointer;
@@ -106,25 +106,24 @@
     .pass-btn { font-size: 0.9rem; padding: 4px 10px; border-radius: 6px; border: 1px solid #fde047; background: #fef9c3; cursor: pointer; }
     .pass-btn:disabled { opacity: 0.3; cursor: not-allowed; background: #f1f5f9; border-color: var(--border); }
     .push-btn { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
-    .undo-btn { font-size: 0.7rem; padding: 3px 6px; border-radius: 4px; border: 1px solid #f87171; background: #fee2e2; color: #991b1b; cursor: pointer; }
-    .push-btn:disabled { display: none; }
-    .moved-label { font-size: 0.7rem; color: #64748b; font-weight: bold; }
 
     .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 10px; }
     .na-card h2 { font-size: 0.9rem; color: var(--muted); border: none; margin-bottom: 8px; }
     .na-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
     .na-item:last-child { border-bottom: none; }
-    .na-text { font-size: 0.85rem; color: var(--muted); }
     .activate-btn { font-size: 0.7rem; padding: 4px 8px; background: #fff; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; cursor: pointer; font-weight: bold; }
 
     .settings { padding-top: 10px; }
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .set-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .task-manager { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
+    .add-task-form { display: grid; gap: 8px; background: #f1f5f9; padding: 12px; border-radius: 8px; }
+    .del-btn { color: #dc2626; border: none; background: none; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🧹 Chore Board</h1>
+    <h1>🧹 Chore Board Pro</h1>
     <div style="display:flex;gap:8px;align-items:center;">
       <button id="viewToggle">⚙</button>
       <span id="status" class="status off">Connecting...</span>
@@ -167,7 +166,7 @@
     <div class="controls">
       <button id="reassign" class="primary">Reassign</button>
       <button id="wildcardBtn">Wildcard Loser</button>
-      <button id="notifyBtn">🔔 Notif</button>
+      <button id="notifyBtn">🔔 Enable Notif</button>
     </div>
 
     <div id="board" class="board"></div>
@@ -175,15 +174,31 @@
 
   <div id="settingsView" class="settings hidden">
     <div class="set-card">
-      <h2>Reward Goal</h2>
+      <h2>Global Goal</h2>
       <div class="set-row">
-        <span>Required Points</span>
-        <input type="number" id="goalInput" value="100" style="width: 70px; padding: 4px;">
+        <span>Target Points</span>
+        <input type="number" id="goalInput" value="100" style="width: 70px;">
       </div>
     </div>
+
     <div class="set-card">
-      <h2>Task Times</h2>
+      <h2>Task Times (Notifs)</h2>
       <div id="settingsList"></div>
+    </div>
+
+    <div class="set-card task-manager">
+      <h2>Manage All Tasks</h2>
+      <div class="add-task-form">
+        <input type="text" id="newTaskName" placeholder="Task Name">
+        <select id="newTaskFreq">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Bi-Weekly</option>
+            <option value="monthly">Monthly</option>
+        </select>
+        <button id="addTaskBtn" class="primary">Add New Task</button>
+      </div>
+      <div id="taskListEditor" style="margin-top:12px;"></div>
     </div>
   </div>
 
@@ -204,18 +219,25 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    const statusEl = document.getElementById("status");
-    const board = document.getElementById("board");
-
     const DAYS = ["Ponedjeljak","Utorak","Srijeda","Cetvrtak","Petak","Subota","Nedjelja"];
     const ASSIGNEES = ["Amy","Aiden"];
     const LOCKED = { "d4": "Aiden" };
-    const POINTS = {
-      "Dorucak": 2, "Rucak": 3, "Sudje": 2, "Slaganje vesa": 2, "Masina za ves/susilica": 3,
-      daily: 1, weekly: 5, "2x weekly": 5, "3x weekly": 5, biweekly: 10, monthly: 15, quarterly: 20
+
+    // Explicit overrides for certain tasks
+    const POINTS_CONFIG = {
+      "Sudje": 2, "Dorucak": 2, "Rucak": 3, "Slaganje vesa": 2, "Masina za ves/susilica": 3,
+      "Tuta": 2, "Mijenjanje pijeska": 2,
+      daily: 1, weekly: 5, biweekly: 10, monthly: 15, quarterly: 20
     };
 
-    const TASKS = [
+    let state = null;
+    let settings = { times: {}, goal: 100, customTasks: [] };
+    let currentFilter = "All";
+    let collapsedDays = {};
+    let lastNotifiedTime = "";
+
+    // Default built-in tasks (merged with custom ones later)
+    const BUILT_IN_TASKS = [
       { id: "d1", name: "Sudje", freq: "daily" },
       { id: "d2", name: "Dorucak", freq: "daily" },
       { id: "d3", name: "Rucak", freq: "daily" },
@@ -226,25 +248,16 @@
       { id: "d8", name: "Zatezanje stola/ugla i misc", freq: "daily" },
       { id: "d9", name: "Mijenjanje Cafkine vode", freq: "daily" },
       { id: "d10", name: "Punjenje elektronike", freq: "daily" },
+      { id: "d11", name: "Mijenjanje pijeska", freq: "daily" },
       { id: "m1", name: "Ribanje sporeta", freq: "2x weekly", days: [1,4] },
-      { id: "m2", name: "Mini-grocery", freq: "2x weekly", days: [2,5] },
-      { id: "m3", name: "Usisavanje", freq: "2x weekly", days: [3,6] },
-      { id: "m4", name: "Bacanje smeca", freq: "2x weekly", days: [0,3] },
       { id: "m5", name: "Ciscenje wc-a", freq: "3x weekly", days: [1,3,5] },
       { id: "w1", name: "Zalijevanje cvijeca", freq: "weekly", days: [5] },
-      { id: "w2", name: "WC generalka", freq: "weekly", days: [6] },
-      { id: "b1", name: "Mijenjanje posteljine", freq: "biweekly", days: [5] },
-      { id: "mo1", name: "Pranje rerne", freq: "monthly", days: [5] },
-      { id: "mo2", name: "Pranje prozora", freq: "monthly", days: [6] },
-      { id: "mo3", name: "Pranje balkona", freq: "monthly", days: [5] },
-      { id: "mo4", name: "Ciscenje ostave", freq: "monthly", days: [6] },
-      { id: "mo5", name: "Usisavanje iza namjestaja", freq: "monthly", days: [5] },
-      { id: "mo6", name: "Pranje usisivaca", freq: "monthly", days: [6] },
-      { id: "mo7", name: "Pranje auta", freq: "monthly", days: [5] },
-      { id: "mo8", name: "Ciscenje frizidera", freq: "monthly", days: [6] },
-      { id: "mo9", name: "Placanje racuna", freq: "monthly", days: [5] },
-      { id: "q1", name: "Ciscenje odvoda", freq: "quarterly", days: [6] }
+      { id: "b1", name: "Mijenjanje posteljine", freq: "biweekly", days: [5] }
     ];
+
+    function getAllTasks() {
+      return [...BUILT_IN_TASKS, ...(settings.customTasks || [])];
+    }
 
     function getWeekNumber(d) {
       const date = new Date(d.getTime());
@@ -258,21 +271,9 @@
     const realWeek = getWeekNumber(realNow);
     const todayIndex = (realNow.getDay() + 6) % 7;
     let displayedWeek = realWeek;
-    let state = null;
-    let settings = { times: {}, goal: 100 };
-    let currentFilter = "All";
-    let collapsedDays = {};
-
-    function appearsThisWeek(t, weekNum) {
-      if (t.freq.includes("weekly")) return true;
-      if (t.freq === "biweekly") return weekNum % 2 === 0;
-      if (t.freq === "monthly") return weekNum % 4 === 1;
-      if (t.freq === "quarterly") return weekNum % 12 === 1;
-      return true;
-    }
 
     onValue(ref(db, "settings"), (snap) => {
-      settings = Object.assign({ times: {}, goal: 100 }, snap.val());
+      settings = Object.assign({ times: {}, goal: 100, customTasks: [] }, snap.val());
       document.getElementById("goalInput").value = settings.goal;
       document.getElementById("goalText").textContent = settings.goal;
       if (state) render();
@@ -281,61 +282,60 @@
 
     function loadWeek(w) {
       onValue(ref(db, "board/week" + w), async (snap) => {
-        statusEl.textContent = "Live";
-        statusEl.classList.add("on");
+        document.getElementById("status").textContent = "Live";
+        document.getElementById("status").classList.add("on");
         state = snap.val();
         document.getElementById("weekLabel").textContent = "Week " + w + (w === realWeek ? " (Today)" : "");
 
         if (!state && w >= realWeek) {
-          const prevSnap = await new Promise(resolve => {
-            onValue(ref(db, "board/week" + (w - 1)), resolve, { onlyOnce: true });
-          });
+          const prevSnap = await new Promise(res => onValue(ref(db, "board/week" + (w-1)), res, {onlyOnce:true}));
           const prevData = prevSnap.val();
-          let lastStartPerson = "Amy";
-          if (prevData && prevData.assignments && prevData.assignments["Ponedjeljak"]) {
-            const first = prevData.assignments["Ponedjeljak"].find(t => t.taskId === "d1");
-            if (first) lastStartPerson = first.assignee;
-          }
-          const startToggle = lastStartPerson === "Amy" ? 1 : 0;
-          state = generateWeek(w, startToggle);
-          set(ref(db, "board/week" + w), state);
+          let lastStart = "Amy";
+          if (prevData?.assignments?.["Ponedjeljak"]) lastStart = prevData.assignments["Ponedjeljak"][0]?.assignee || "Amy";
+          state = generateWeek(w, lastStart === "Amy" ? 1 : 0);
+          save();
         }
         render();
       });
     }
 
-    function generateWeek(w, forcedStartToggle = null) {
+    function generateWeek(w, forcedToggle = null) {
       const assignments = {};
       DAYS.forEach(d => assignments[d] = []);
-      let toggle = forcedStartToggle !== null ? forcedStartToggle : (Math.random() < 0.5 ? 0 : 1);
+      let toggle = forcedToggle !== null ? forcedToggle : (Math.random() < 0.5 ? 0 : 1);
+      const all = getAllTasks();
 
-      TASKS.filter(t => t.freq === "daily").forEach(t => {
+      all.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
           const forced = LOCKED[t.id];
-          assignments[day].push({ id: t.id + "_" + day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], status: "pending", wildcard: (t.id === "d1" || t.id === "d2") });
+          assignments[day].push({ id: t.id+"_"+day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], status: "pending", wildcard: (t.id === "d1") });
           if (!forced) toggle = 1 - toggle;
         });
       });
 
-      TASKS.filter(t => t.freq !== "daily").forEach(t => {
+      all.filter(t => t.freq !== "daily").forEach(t => {
         if (!appearsThisWeek(t, w)) return;
         (t.days || [6]).forEach(di => {
-          assignments[DAYS[di]].push({ id: t.id + "_" + di, taskId: t.id, name: t.name, freq: t.freq, assignee: ASSIGNEES[toggle], status: "pending", wildcard: false });
+          assignments[DAYS[di]].push({ id: t.id+"_"+di, taskId: t.id, name: t.name, freq: t.freq, assignee: ASSIGNEES[toggle], status: "pending", wildcard: false });
           toggle = 1 - toggle;
         });
       });
-
       return { assignments, week: w };
     }
 
-    function save() {
-      set(ref(db, "board/week" + displayedWeek), state);
+    function appearsThisWeek(t, weekNum) {
+      if (t.freq.includes("weekly")) return true;
+      if (t.freq === "biweekly") return weekNum % 2 === 0;
+      if (t.freq === "monthly") return weekNum % 4 === 1;
+      return true;
     }
+
+    function save() { set(ref(db, "board/week" + displayedWeek), state); }
 
     function render() {
       board.innerHTML = "";
       let amyPts = 0, aidenPts = 0;
-      if (!state || !state.assignments) return;
+      if (!state?.assignments) return;
 
       DAYS.forEach((day, dayIdx) => {
         const items = state.assignments[day] || [];
@@ -345,226 +345,90 @@
 
         const isToday = dayIdx === todayIndex && displayedWeek === realWeek;
         const card = document.createElement("div");
-        card.className = "day-card";
-        if (isToday) card.classList.add("today");
-
+        card.className = "day-card" + (isToday ? " today" : "");
         if (collapsedDays[day] === undefined) collapsedDays[day] = !isToday;
         if (collapsedDays[day]) card.classList.add("collapsed");
 
-        if (isToday) {
-          const tag = document.createElement("div");
-          tag.className = "today-tag";
-          tag.textContent = "DANAS";
-          card.appendChild(tag);
-        }
-
-        const header = document.createElement("div");
-        header.className = "day-header";
-        header.innerHTML = `<h2>${day}</h2><span class="toggle-icon">▼</span>`;
-        header.onclick = () => {
-           collapsedDays[day] = !collapsedDays[day];
-           card.classList.toggle("collapsed");
-        };
-        card.appendChild(header);
+        if (isToday) card.innerHTML += `<div class="today-tag">DANAS</div>`;
+        card.innerHTML += `<div class="day-header"><h2>${day}</h2><span class="toggle-icon">▼</span></div>`;
+        card.querySelector(".day-header").onclick = () => { collapsedDays[day] = !collapsedDays[day]; card.classList.toggle("collapsed"); };
 
         const content = document.createElement("div");
         content.className = "day-content";
-
         const ul = document.createElement("ul");
-        items.forEach(item => {
-          const status = item.status || (item.done ? "completed" : "pending");
 
+        items.forEach(item => {
+          const status = item.status || "pending";
           if (status === "completed" && !item.isMoved) {
-            const pts = POINTS[item.name] || POINTS[item.freq] || 0;
-            if (item.assignee === "Amy") amyPts += pts;
-            else aidenPts += pts;
+            const pts = POINTS_CONFIG[item.name] || POINTS_CONFIG[item.freq] || 0;
+            if (item.assignee === "Amy") amyPts += pts; else aidenPts += pts;
           }
 
           const li = document.createElement("li");
-          li.classList.add("status-" + status);
-          if (currentFilter !== "All" && item.assignee !== currentFilter) li.classList.add("hidden");
-          if (item.isMoved) li.classList.add("is-moved");
+          li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
 
-          const statusSel = document.createElement("select");
-          statusSel.className = "status-select";
-          statusSel.disabled = item.isMoved;
-          [
-            { value: "pending", icon: "⏳", label: "Pending" },
-            { value: "completed", icon: "✅", label: "Done" },
-            { value: "incomplete", icon: "❌", label: "Incomplete" },
-            { value: "notApplicable", icon: "➖", label: "N/A" }
-          ].forEach(opt => {
-            const op = document.createElement("option");
-            op.value = opt.value;
-            op.textContent = opt.icon + " " + opt.label;
-            if (status === opt.value) op.selected = true;
-            statusSel.appendChild(op);
-          });
-          statusSel.addEventListener("change", () => {
-            item.status = statusSel.value;
-            item.done = item.status === "completed";
-            save();
-          });
-          li.appendChild(statusSel);
+          li.innerHTML = `
+            <select class="status-select">
+                <option value="pending" ${status==='pending'?'selected':''}>⏳ Pending</option>
+                <option value="completed" ${status==='completed'?'selected':''}>✅ Done</option>
+                <option value="incomplete" ${status==='incomplete'?'selected':''}>❌ Incomplete</option>
+                <option value="notApplicable" ${status==='notApplicable'?'selected':''}>➖ N/A</option>
+            </select>
+            <div class="task-name">${item.wildcard?'⭐ ':''}${item.name} <span class="freq-tag">(${item.freq})</span> ${settings.times[item.taskId]?`<span class="time-tag">🕐 ${settings.times[item.taskId]}</span>`:''}</div>
+            <button class="assignee ${item.assignee.toLowerCase()} ${(LOCKED[item.taskId] || item.wildcard)?'locked':''}">
+                ${item.assignee} ${(LOCKED[item.taskId] || item.wildcard)?'🔒':''}
+            </button>
+            <div class="row-tools">
+                <button class="star-btn ${item.wildcard?'active':''}">⭐</button>
+                ${item.freq!=='daily'?`<button class="push-btn">Move ⏭</button>`:''}
+            </div>
+          `;
 
-          if (item.freq === "daily") {
-            const pass = document.createElement("button");
-            pass.className = "pass-btn";
-            pass.textContent = "→";
-            const prevDayIdx = dayIdx - 1;
-            let wasPassedRecently = false;
-            if (prevDayIdx >= 0) {
-              const yesterdayTask = state.assignments[DAYS[prevDayIdx]].find(x => x.taskId === item.taskId);
-              if (yesterdayTask && yesterdayTask.passedToday) wasPassedRecently = true;
-            }
-            pass.disabled = wasPassedRecently || item.isMoved;
-            pass.addEventListener("click", () => {
-              const me = item.assignee;
-              const other = me === "Amy" ? "Aiden" : "Amy";
-              item.assignee = other;
-              item.passedToday = true;
-              if (dayIdx < 6) {
-                const nextItem = state.assignments[DAYS[dayIdx + 1]].find(x => x.taskId === item.taskId);
-                if (nextItem) nextItem.assignee = me;
-              }
-              save();
-            });
-            li.appendChild(pass);
+          li.querySelector(".status-select").onchange = (e) => { item.status = e.target.value; save(); };
+          li.querySelector(".star-btn").onclick = () => {
+             const newVal = !item.wildcard;
+             if (item.freq === "daily") {
+                 Object.values(state.assignments).forEach(list => list.forEach(t => { if(t.taskId===item.taskId) t.wildcard=newVal; }));
+             } else item.wildcard = newVal;
+             save();
+          };
+
+          const badge = li.querySelector(".assignee");
+          if (!badge.classList.contains("locked")) {
+            badge.onclick = () => { item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy"; save(); };
           }
 
-          const nameWrap = document.createElement("div");
-          nameWrap.className = "task-name";
-          nameWrap.textContent = (item.wildcard ? "⭐ " : "") + item.name;
-          const freqTag = document.createElement("span");
-          freqTag.className = "freq-tag";
-          freqTag.textContent = "(" + item.freq + ")";
-          nameWrap.appendChild(document.createTextNode(" "));
-          nameWrap.appendChild(freqTag);
-
-          const tTime = settings.times[item.taskId];
-          if (tTime) {
-            const tt = document.createElement("span");
-            tt.className = "time-tag";
-            tt.textContent = "🕐 " + tTime;
-            nameWrap.appendChild(tt);
-          }
-
-          const locked = !!LOCKED[item.taskId];
-          const badge = document.createElement("button");
-          // WILD CARD LOCK: If locked OR wildcard, show the locked style
-          const isActuallyLocked = locked || item.wildcard;
-          badge.className = "assignee " + item.assignee.toLowerCase() + (isActuallyLocked ? " locked" : "");
-          badge.textContent = item.assignee + (isActuallyLocked ? " 🔒" : "");
-
-          if (!isActuallyLocked && !item.isMoved) {
-            badge.addEventListener("click", () => {
-              item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy";
-              save();
-            });
-          }
-          li.appendChild(nameWrap);
-          li.appendChild(badge);
-
-          const tools = document.createElement("div");
-          tools.className = "row-tools";
-
-          if (!locked && !item.isMoved) {
-            const star = document.createElement("button");
-            star.className = "star-btn" + (item.wildcard ? " active" : "");
-            star.textContent = "⭐";
-            star.addEventListener("click", () => {
-              const newVal = !item.wildcard;
-              if (item.freq === "daily") {
-                Object.values(state.assignments).forEach(dayList => {
-                  dayList.forEach(t => { if (t.taskId === item.taskId) t.wildcard = newVal; });
-                });
-              } else {
-                item.wildcard = newVal;
-              }
-              save();
-            });
-            tools.appendChild(star);
-          }
-
-          if (item.isMoved) {
-            const lbl = document.createElement("span");
-            lbl.className = "moved-label";
-            lbl.textContent = "MOVED ⏭";
-            tools.appendChild(lbl);
-          } else {
-            if (item.freq !== "daily") {
-              const moveBtn = document.createElement("button");
-              moveBtn.className = "push-btn";
-              moveBtn.textContent = "Move ⏭";
-              moveBtn.disabled = !!item.wasPushedFromPrev;
-              moveBtn.addEventListener("click", () => moveTaskToNextWeek(item, day));
-              tools.appendChild(moveBtn);
-              const sel = document.createElement("select");
-              DAYS.forEach(d => {
-                const opt = document.createElement("option");
-                opt.value = d;
-                opt.textContent = d;
-                if (d === day) opt.selected = true;
-                sel.appendChild(opt);
-              });
-              sel.addEventListener("change", () => {
-                const arr = state.assignments[day];
-                const i = arr.findIndex(x => x.id === item.id);
-                const [moved] = arr.splice(i, 1);
-                state.assignments[sel.value].push(moved);
-                save();
-              });
-              tools.appendChild(sel);
-            }
-          }
-          li.appendChild(tools);
           ul.appendChild(li);
         });
 
-        if (ul.querySelectorAll("li:not(.hidden)").length === 0 && currentFilter !== "All") return;
         content.appendChild(ul);
         card.appendChild(content);
         board.appendChild(card);
       });
 
       renderNotDue();
-      const totalPts = amyPts + aidenPts;
       document.getElementById("amyPoints").textContent = amyPts;
       document.getElementById("aidenPoints").textContent = aidenPts;
-      document.getElementById("totalPoints").textContent = totalPts;
-      const progress = Math.min(100, (totalPts / settings.goal) * 100);
-      document.getElementById("progressBar").style.width = progress + "%";
-      document.getElementById("rewardMsg").classList.toggle("active", totalPts >= settings.goal);
+      document.getElementById("totalPoints").textContent = amyPts + aidenPts;
+      document.getElementById("progressBar").style.width = Math.min(100, ((amyPts+aidenPts)/settings.goal)*100) + "%";
+      document.getElementById("rewardMsg").classList.toggle("active", (amyPts+aidenPts) >= settings.goal);
     }
 
     function renderNotDue() {
-      const notDueItems = TASKS.filter(t => !appearsThisWeek(t, displayedWeek) && t.freq !== "daily");
-      if (notDueItems.length === 0) return;
+      const activeIds = new Set(getAllTasks().filter(t => appearsThisWeek(t, displayedWeek)).map(t => t.id));
+      const notDue = getAllTasks().filter(t => t.freq !== 'daily' && !activeIds.has(t.id));
+      if (!notDue.length) return;
+
       const card = document.createElement("div");
       card.className = "na-card";
-      const h = document.createElement("h2");
-      h.textContent = "Not Due This Week";
-      card.appendChild(h);
-
-      notDueItems.forEach(t => {
+      card.innerHTML = `<h2>Not Due This Week</h2>`;
+      notDue.forEach(t => {
         const div = document.createElement("div");
         div.className = "na-item";
-        div.innerHTML = `
-          <span class="na-text">${t.name} (${t.freq})</span>
-          <button class="activate-btn">Activate +</button>
-        `;
-        div.querySelector(".activate-btn").onclick = () => {
-          if (!state.assignments["Nedjelja"]) state.assignments["Nedjelja"] = [];
-          state.assignments["Nedjelja"].push({
-            id: t.id + "_" + Date.now(),
-            taskId: t.id,
-            name: t.name,
-            freq: t.freq,
-            assignee: ASSIGNEES[0],
-            status: "pending",
-            wildcard: false,
-            manuallyActivated: true
-          });
+        div.innerHTML = `<span class="na-text">${t.name} (${t.freq})</span><button class="activate-btn">Activate +</button>`;
+        div.querySelector("button").onclick = () => {
+          if(!state.assignments["Nedjelja"]) state.assignments["Nedjelja"] = [];
+          state.assignments["Nedjelja"].push({ id: t.id+"_act", taskId: t.id, name: t.name, freq: t.freq, assignee: "Amy", status: "pending" });
           save();
         };
         card.appendChild(div);
@@ -575,107 +439,103 @@
     function renderSettings() {
       const list = document.getElementById("settingsList");
       list.innerHTML = "";
-      TASKS.filter(t => t.freq !== "daily").forEach(t => {
+      getAllTasks().forEach(t => {
         const row = document.createElement("div");
         row.className = "set-row";
-        row.innerHTML = `<span>${t.name}</span><input type="text" value="${settings.times[t.id] || ""}" placeholder="e.g. 30 min" style="width: 80px; padding: 4px;">`;
-        row.querySelector("input").addEventListener("change", (e) => {
-          settings.times[t.id] = e.target.value;
-          set(ref(db, "settings"), settings);
-        });
+        row.innerHTML = `<span>${t.name}</span><input type="time" value="${settings.times[t.id] || ""}">`;
+        row.querySelector("input").onchange = (e) => { settings.times[t.id] = e.target.value; set(ref(db, "settings"), settings); };
         list.appendChild(row);
       });
-    }
 
-    async function moveTaskToNextWeek(item, currentDay) {
-      if (item.wasPushedFromPrev) return alert("Cannot move this task again!");
-      const nextW = displayedWeek + 1;
-      const nextSnap = await new Promise(resolve => {
-        onValue(ref(db, "board/week" + nextW), resolve, { onlyOnce: true });
+      const edit = document.getElementById("taskListEditor");
+      edit.innerHTML = "";
+      (settings.customTasks || []).forEach((t, i) => {
+        const row = document.createElement("div");
+        row.className = "set-row";
+        row.innerHTML = `<span>${t.name}</span><button class="del-btn">Delete</button>`;
+        row.querySelector(".del-btn").onclick = () => { settings.customTasks.splice(i, 1); set(ref(db, "settings"), settings); };
+        edit.appendChild(row);
       });
-      let nextState = nextSnap.val();
-      if (!nextState) {
-        const startToggle = item.assignee === "Amy" ? 1 : 0;
-        nextState = generateWeek(nextW, startToggle);
-      }
-      const newId = item.taskId + "_moved_" + Date.now();
-      const movedItem = { ...item, id: newId, status: "pending", wasPushedFromPrev: true, pushedFromWeek: displayedWeek };
-      if (!nextState.assignments[currentDay]) nextState.assignments[currentDay] = [];
-      nextState.assignments[currentDay].push(movedItem);
-      await set(ref(db, "board/week" + nextW), nextState);
-      item.isMoved = true;
-      item.status = "pending";
-      save();
     }
 
-    document.getElementById("viewToggle").addEventListener("click", () => {
+    // --- NOTIFICATION ENGINE ---
+    function checkScheduledTasks() {
+      const now = new Date();
+      const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+
+      if (currentTime === lastNotifiedTime) return;
+
+      const all = getAllTasks();
+      all.forEach(t => {
+        if (settings.times[t.id] === currentTime) {
+          if (Notification.permission === "granted") {
+            new Notification("Chore Reminder!", { body: `It's time for: ${t.name}`, icon: "https://cdn-icons-png.flaticon.com/512/1048/1048953.png" });
+            lastNotifiedTime = currentTime;
+          }
+        }
+      });
+    }
+
+    setInterval(checkScheduledTasks, 60000); // Check every minute
+
+    document.getElementById("addTaskBtn").onclick = () => {
+      const name = document.getElementById("newTaskName").value;
+      if (!name) return;
+      const t = { id: "cust_" + Date.now(), name, freq: document.getElementById("newTaskFreq").value };
+      settings.customTasks = settings.customTasks || [];
+      settings.customTasks.push(t);
+      set(ref(db, "settings"), settings);
+      document.getElementById("newTaskName").value = "";
+    };
+
+    document.getElementById("viewToggle").onclick = () => {
       document.getElementById("mainView").classList.toggle("hidden");
       document.getElementById("settingsView").classList.toggle("hidden");
-    });
+    };
 
-    document.getElementById("prevWeek").addEventListener("click", () => { displayedWeek--; loadWeek(displayedWeek); });
-    document.getElementById("nextWeek").addEventListener("click", () => { displayedWeek++; loadWeek(displayedWeek); });
+    document.getElementById("notifyBtn").onclick = () => {
+      Notification.requestPermission().then(p => {
+        if (p === "granted") {
+            new Notification("Notifications Enabled!", { body: "You will now receive alerts for chores." });
+            alert("Success! Alerts are on.");
+        }
+      });
+    };
 
-    document.getElementById("todayBtn").addEventListener("click", () => {
+    document.getElementById("todayBtn").onclick = () => {
       displayedWeek = realWeek;
       loadWeek(displayedWeek);
       setTimeout(() => {
-        const todayCard = document.querySelector(".day-card.today");
-        if (todayCard) {
-          todayCard.classList.remove("collapsed");
-          collapsedDays[DAYS[todayIndex]] = false;
-          todayCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const card = document.querySelector(".day-card.today");
+        if (card) {
+            card.classList.remove("collapsed");
+            collapsedDays[DAYS[todayIndex]] = false;
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      }, 100);
-    });
+      }, 200);
+    };
 
-    document.getElementById("reassign").addEventListener("click", () => {
-      if (confirm("Reset current week and reassign tasks?")) {
-        state = generateWeek(displayedWeek);
-        save();
-      }
-    });
-
-    document.getElementById("wildcardBtn").addEventListener("click", () => {
-      const wildcards = [];
-      Object.values(state.assignments).forEach(day => {
-        day.forEach(item => { if (item.wildcard) wildcards.push(item); });
-      });
-      if (wildcards.length === 0) return alert("No wildcard tasks marked with ⭐");
-      const lucky = wildcards[Math.floor(Math.random() * wildcards.length)];
-      alert(lucky.assignee + " has been chosen for: " + lucky.name);
-
-      if (Notification.permission === "granted") {
-        new Notification("Wildcard Loser!", { body: lucky.assignee + " must do " + lucky.name });
-      }
-    });
-
-    document.getElementById("notifyBtn").addEventListener("click", () => {
-      if (!("Notification" in window)) return alert("This browser does not support notifications.");
-
-      Notification.requestPermission().then(p => {
-        if (p === "granted") {
-          alert("Notifications enabled! Note: On iPhone, you must use 'Add to Home Screen' for this to work.");
-          new Notification("Test Notification", { body: "Notifications are working!" });
-        } else {
-          alert("Notification permission was denied.");
-        }
-      });
-    });
+    document.getElementById("wildcardBtn").onclick = () => {
+      const list = [];
+      Object.values(state.assignments).forEach(d => d.forEach(t => { if(t.wildcard) list.push(t); }));
+      if (!list.length) return alert("No wildcards set!");
+      const lucky = list[Math.floor(Math.random()*list.length)];
+      alert(`${lucky.assignee} has been assigned: ${lucky.name}`);
+      if (Notification.permission === "granted") new Notification("Wildcard Selected!", { body: `${lucky.assignee} must do ${lucky.name}` });
+    };
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
+      btn.onclick = () => {
         document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         currentFilter = btn.dataset.filter;
         render();
-      });
+      };
     });
 
-    document.getElementById("goalInput").addEventListener("change", (e) => {
-      settings.goal = parseInt(e.target.value) || 100;
-      set(ref(db, "settings"), settings);
-    });
+    document.getElementById("prevWeek").onclick = () => { displayedWeek--; loadWeek(displayedWeek); };
+    document.getElementById("nextWeek").onclick = () => { displayedWeek++; loadWeek(displayedWeek); };
+    document.getElementById("reassign").onclick = () => { if(confirm("Reset progress and reassign?")) { state = generateWeek(displayedWeek); save(); } };
 
     loadWeek(displayedWeek);
   </script>
