@@ -81,8 +81,6 @@
 
     ul { list-style: none; }
     li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-    li.is-moved { opacity: 0.4; background: #f1f5f9; }
-    li.is-moved .task-name { text-decoration: line-through; }
     li:last-child { border-bottom: none; }
 
     .status-completed .task-name { text-decoration: line-through; color: var(--muted); }
@@ -110,10 +108,21 @@
     .push-btn { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
 
     .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 10px; }
-    .na-card h2 { font-size: 0.9rem; color: var(--muted); border: none; margin-bottom: 8px; }
-    .na-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .na-card h2 { font-size: 1rem; color: var(--text); border: none; margin-bottom: 12px; border-bottom: 2px solid var(--border); padding-bottom: 6px; }
+
+    .na-group { margin-bottom: 12px; border-radius: 8px; background: #fff; border: 1px solid var(--border); overflow: hidden; }
+    .na-group-header { display: flex; align-items: center; justify-content: space-between; padding: 10px; background: #f8fafc; cursor: pointer; user-select: none; }
+    .na-group-title { font-size: 0.85rem; font-weight: bold; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .na-group-content { padding: 0 10px; }
+    .na-group.collapsed .na-group-content { display: none; }
+    .na-group.collapsed .na-toggle-icon { transform: rotate(-90deg); }
+
+    .na-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
     .na-item:last-child { border-bottom: none; }
-    .activate-btn { font-size: 0.7rem; padding: 4px 8px; background: #fff; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .na-text { font-size: 0.85rem; color: var(--text); font-weight: 500; }
+    .na-freq-info { font-size: 0.7rem; color: var(--muted); display: block; }
+    .wait-badge { font-size: 0.65rem; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-left: 5px; color: var(--muted); }
+    .activate-btn { font-size: 0.7rem; padding: 5px 10px; background: #fff; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; cursor: pointer; font-weight: bold; }
 
     .settings { padding-top: 10px; }
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
@@ -232,6 +241,7 @@
     let settings = { goal: 100, customTasks: [], taskOverrides: {} };
     let currentFilter = "All";
     let collapsedDays = {};
+    let naCollapsedGroups = { next: false, two: true, three: true };
 
     const DEFAULT_BUILT_IN = [
       { id: "d1", name: "Sudje", freq: "daily" },
@@ -346,11 +356,20 @@
     }
 
     function appearsThisWeek(t, weekNum) {
-      if (t.freq.includes("weekly")) return true;
-      if (t.freq === "biweekly") return weekNum % 2 === 0;
-      if (t.freq === "monthly") return weekNum % 4 === 1;
-      if (t.freq === "quarterly") return weekNum % 12 === 1;
+      const f = t.freq.toLowerCase();
+      if (f === "daily") return true;
+      if (f.includes("weekly") && f !== "biweekly") return true;
+      if (f === "biweekly") return weekNum % 2 === 0;
+      if (f === "monthly") return weekNum % 4 === 1;
+      if (f === "quarterly") return weekNum % 12 === 1;
       return true;
+    }
+
+    function getWeeksUntil(t, currentW) {
+        for (let i = 1; i <= 24; i++) {
+            if (appearsThisWeek(t, currentW + i)) return i;
+        }
+        return 24;
     }
 
     function save() { set(ref(db, "board/week" + displayedWeek), state); }
@@ -400,9 +419,7 @@
           const li = document.createElement("li");
           li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
 
-          // Restricting star button logic
-          const forbiddenFreqs = ["biweekly", "monthly", "quarterly"];
-          const isStarDisabled = forbiddenFreqs.some(f => item.freq.includes(f));
+          const isStarDisabled = ["biweekly", "monthly", "quarterly"].includes(item.freq.toLowerCase());
 
           li.innerHTML = `
             <select class="status-select">
@@ -491,19 +508,61 @@
       Object.values(state.assignments).forEach(dayList => {
           dayList.forEach(item => activeIds.add(item.taskId));
       });
-      const notDue = getAllTasks().filter(t => t.freq !== 'daily' && !activeIds.has(t.id));
-      if (!notDue.length) return;
-      const card = document.createElement("div");
-      card.className = "na-card"; card.innerHTML = `<h2>Not Due This Week</h2>`;
-      notDue.forEach(t => {
-        const div = document.createElement("div");
-        div.className = "na-item";
-        div.innerHTML = `<span>${t.name} (${t.freq})</span><button class="activate-btn">Activate +</button>`;
-        div.querySelector("button").onclick = () => {
-          injectTaskIntoCurrentBoard(t, "Nedjelja");
-        };
-        card.appendChild(div);
+
+      const all = getAllTasks();
+      const notDueMaster = all.filter(t => t.freq.toLowerCase() !== 'daily' && !activeIds.has(t.id) && !appearsThisWeek(t, displayedWeek));
+
+      if (!notDueMaster.length) return;
+
+      const groups = { next: [], two: [], three: [] };
+      notDueMaster.forEach(t => {
+          const wait = getWeeksUntil(t, displayedWeek);
+          if (wait === 1) groups.next.push({ task: t, wait });
+          else if (wait === 2) groups.two.push({ task: t, wait });
+          else groups.three.push({ task: t, wait });
       });
+
+      const card = document.createElement("div");
+      card.className = "na-card";
+      card.innerHTML = `<h2>Not Due This Week</h2>`;
+
+      const createGroup = (id, title, list) => {
+          if (!list.length) return;
+          const g = document.createElement("div");
+          g.className = "na-group" + (naCollapsedGroups[id] ? " collapsed" : "");
+          g.innerHTML = `
+            <div class="na-group-header">
+                <div class="na-group-title">${title} (${list.length})</div>
+                <span class="na-toggle-icon">▼</span>
+            </div>
+            <div class="na-group-content"></div>
+          `;
+          g.querySelector(".na-group-header").onclick = () => {
+              naCollapsedGroups[id] = !naCollapsedGroups[id];
+              g.classList.toggle("collapsed");
+          };
+          const content = g.querySelector(".na-group-content");
+          list.forEach(entry => {
+              const t = entry.task;
+              const div = document.createElement("div");
+              div.className = "na-item";
+              div.innerHTML = `
+                <div>
+                    <span class="na-text">${t.name} <span class="wait-badge">(In ${entry.wait} week${entry.wait > 1 ? 's' : ''})</span></span>
+                    <span class="na-freq-info">${t.freq}</span>
+                </div>
+                <button class="activate-btn">Activate +</button>
+              `;
+              div.querySelector("button").onclick = () => injectTaskIntoCurrentBoard(t, "Nedjelja");
+              content.appendChild(div);
+          });
+          card.appendChild(g);
+      };
+
+      createGroup("next", "Due Next Week", groups.next);
+      createGroup("two", "Due in 2 Weeks", groups.two);
+      createGroup("three", "Due in 3 Weeks +", groups.three);
+
       board.appendChild(card);
     }
 
@@ -587,7 +646,6 @@
     };
 
     document.getElementById("wildcardBtn").onclick = () => {
-      // 1. Identify all wildcard chores across the week
       const wildcardTasks = [];
       Object.values(state.assignments).forEach(dayList => {
           dayList.forEach(item => {
@@ -595,12 +653,10 @@
           });
       });
 
-      // 2. Error if none exist
       if (wildcardTasks.length === 0) {
           return alert("Error: No wildcard chores (⭐) selected for this week!");
       }
 
-      // 3. Prompt for manual loser input
       const choice = prompt("Enter 'Amy' or 'Aiden' to set the wildcard loser for this week:");
       if (!choice) return;
 
@@ -611,7 +667,6 @@
           return alert("Error: Please enter either 'Amy' or 'Aiden'.");
       }
 
-      // 4. Update all starred tasks in the week state
       Object.values(state.assignments).forEach(dayList => {
           dayList.forEach(item => {
               if (item.wildcard) {
