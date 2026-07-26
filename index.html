@@ -360,8 +360,19 @@
       let amyPts = 0, aidenPts = 0;
       if (!state?.assignments) return;
 
+      const statusPriority = { "pending": 0, "incomplete": 1, "notApplicable": 2, "completed": 3 };
+
       DAYS.forEach((day, dayIdx) => {
         const items = state.assignments[day] || [];
+
+        // Sorting Logic: Priority to pending, then points (descending)
+        items.sort((a, b) => {
+            const pA = statusPriority[a.status || "pending"];
+            const pB = statusPriority[b.status || "pending"];
+            if (pA !== pB) return pA - pB;
+            return getPoints(b) - getPoints(a);
+        });
+
         const visibleItems = currentFilter === "All" ? items : items.filter(i => i.assignee === currentFilter);
         if (visibleItems.length === 0 && currentFilter !== "All") return;
 
