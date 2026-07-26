@@ -419,7 +419,7 @@
           const li = document.createElement("li");
           li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
 
-          const isStarDisabled = ["biweekly", "monthly", "quarterly"].includes(item.freq.toLowerCase());
+          const isStarDisabled = ["monthly", "quarterly"].includes(item.freq.toLowerCase());
 
           li.innerHTML = `
             <select class="status-select">
@@ -442,10 +442,16 @@
 
           if (!isStarDisabled) {
             li.querySelector(".star-btn").onclick = () => {
-                const newVal = !item.wildcard;
-                if (item.freq === "daily") {
-                    Object.values(state.assignments).forEach(list => list.forEach(t => { if(t.taskId===item.taskId) t.wildcard=newVal; }));
-                } else item.wildcard = newVal;
+                let currentWildcardCount = 0;
+                Object.values(state.assignments).forEach(dayList => {
+                    dayList.forEach(t => { if(t.wildcard) currentWildcardCount++; });
+                });
+
+                if (!item.wildcard && currentWildcardCount >= 2) {
+                    return alert("Maximum of 2 wildcard chores allowed per week!");
+                }
+
+                item.wildcard = !item.wildcard;
                 save();
             };
           }
@@ -497,7 +503,7 @@
         let nextState = nextSnap.val();
         if (!nextState) nextState = generateWeek(nextW, item.assignee === "Amy" ? 1 : 0);
         if (!nextState.assignments[day]) nextState.assignments[day] = [];
-        nextState.assignments[day].push({ ...item, id: item.taskId+"_moved_"+Date.now(), status: "pending" });
+        nextState.assignments[day].push({ ...item, id: item.taskId+"_moved_"+Date.now(), status: "pending", wildcard: false });
         await set(ref(db, "board/week" + nextW), nextState);
         state.assignments[day] = state.assignments[day].filter(x => x.id !== item.id);
         save();
