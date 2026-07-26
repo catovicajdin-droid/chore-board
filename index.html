@@ -105,7 +105,7 @@
 
     .star-btn { font-size: 1.1rem; background: none; border: none; cursor: pointer; opacity: 0.3; padding: 0 4px; filter: grayscale(1); }
     .star-btn.active { opacity: 1; filter: grayscale(0); }
-    .star-btn:disabled { opacity: 0.1; cursor: not-allowed; }
+    .star-btn:disabled { opacity: 0.05; cursor: not-allowed; }
 
     .push-btn { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
 
@@ -168,7 +168,7 @@
 
     <div class="controls">
       <button id="reassign" class="primary">Reassign</button>
-      <button id="wildcardBtn">Wildcard Loser</button>
+      <button id="wildcardBtn">Set Wildcard Loser</button>
     </div>
 
     <div id="board" class="board"></div>
@@ -330,7 +330,7 @@
       all.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
           const forced = LOCKED[t.id];
-          assignments[day].push({ id: t.id+"_"+day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], status: "pending", wildcard: (t.id === "d1") });
+          assignments[day].push({ id: t.id+"_"+day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], status: "pending", wildcard: false });
           if (!forced) toggle = 1 - toggle;
         });
       });
@@ -365,7 +365,6 @@
       DAYS.forEach((day, dayIdx) => {
         const items = state.assignments[day] || [];
 
-        // Sorting Logic: Priority to pending, then points (descending)
         items.sort((a, b) => {
             const pA = statusPriority[a.status || "pending"];
             const pB = statusPriority[b.status || "pending"];
@@ -401,7 +400,9 @@
           const li = document.createElement("li");
           li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
 
-          const isWildcardAllowed = !["monthly", "quarterly"].includes(item.freq);
+          // Restricting star button logic
+          const forbiddenFreqs = ["biweekly", "monthly", "quarterly"];
+          const isStarDisabled = forbiddenFreqs.some(f => item.freq.includes(f));
 
           li.innerHTML = `
             <select class="status-select">
@@ -415,14 +416,14 @@
                 ${item.assignee} ${(LOCKED[item.taskId] || item.wildcard)?'🔒':''}
             </button>
             <div class="row-tools">
-                <button class="star-btn ${item.wildcard?'active':''}" ${!isWildcardAllowed ? 'disabled' : ''}>⭐</button>
+                <button class="star-btn ${item.wildcard?'active':''}" ${isStarDisabled ? 'disabled' : ''}>⭐</button>
                 ${item.freq!=='daily'?`<button class="push-btn">Move ⏭</button>`:''}
             </div>
           `;
 
           li.querySelector(".status-select").onchange = (e) => { item.status = e.target.value; save(); };
 
-          if (isWildcardAllowed) {
+          if (!isStarDisabled) {
             li.querySelector(".star-btn").onclick = () => {
                 const newVal = !item.wildcard;
                 if (item.freq === "daily") {
@@ -586,11 +587,41 @@
     };
 
     document.getElementById("wildcardBtn").onclick = () => {
-      const list = [];
-      Object.values(state.assignments).forEach(d => d.forEach(t => { if(t.wildcard) list.push(t); }));
-      if(!list.length) return alert("No wildcards!");
-      const lucky = list[Math.floor(Math.random()*list.length)];
-      alert(`${lucky.assignee} does ${lucky.name}`);
+      // 1. Identify all wildcard chores across the week
+      const wildcardTasks = [];
+      Object.values(state.assignments).forEach(dayList => {
+          dayList.forEach(item => {
+              if (item.wildcard) wildcardTasks.push(item);
+          });
+      });
+
+      // 2. Error if none exist
+      if (wildcardTasks.length === 0) {
+          return alert("Error: No wildcard chores (⭐) selected for this week!");
+      }
+
+      // 3. Prompt for manual loser input
+      const choice = prompt("Enter 'Amy' or 'Aiden' to set the wildcard loser for this week:");
+      if (!choice) return;
+
+      const loser = choice.trim().toLowerCase();
+      const finalName = loser === 'amy' ? 'Amy' : (loser === 'aiden' ? 'Aiden' : null);
+
+      if (!finalName) {
+          return alert("Error: Please enter either 'Amy' or 'Aiden'.");
+      }
+
+      // 4. Update all starred tasks in the week state
+      Object.values(state.assignments).forEach(dayList => {
+          dayList.forEach(item => {
+              if (item.wildcard) {
+                  item.assignee = finalName;
+              }
+          });
+      });
+
+      save();
+      alert(`Success: All starred chores assigned to ${finalName}.`);
     };
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
