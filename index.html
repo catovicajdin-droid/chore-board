@@ -72,7 +72,8 @@
 
     .day-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 8px; user-select: none; }
     .day-title { display: flex; align-items: center; gap: 6px; font-size: 1rem; font-weight: bold; }
-    .day-star { color: #f59e0b; font-size: 0.9rem; }
+    .day-star { color: #f59e0b; font-size: 1rem; padding: 2px 6px; border-radius: 4px; }
+    .day-star:active { background: #fef3c7; }
     .toggle-icon { font-size: 0.8rem; color: var(--muted); transition: transform 0.2s ease; }
 
     .day-card.collapsed .day-content { display: none; }
@@ -402,8 +403,28 @@
         if (collapsedDays[day]) card.classList.add("collapsed");
 
         if (isToday) card.innerHTML += `<div class="today-tag">DANAS</div>`;
-        card.innerHTML += `<div class="day-header"><div class="day-title">${day} ${hasWildcard ? '<span class="day-star">⭐</span>' : ''}</div><span class="toggle-icon">▼</span></div>`;
-        card.querySelector(".day-header").onclick = () => { collapsedDays[day] = !collapsedDays[day]; card.classList.toggle("collapsed"); };
+        card.innerHTML += `
+          <div class="day-header">
+            <div class="day-title">
+                ${day}
+                <span class="day-star">${hasWildcard ? '⭐' : ''}</span>
+            </div>
+            <span class="toggle-icon">▼</span>
+          </div>`;
+
+        // Interactive day header star logic
+        const header = card.querySelector(".day-header");
+        const starInHeader = header.querySelector(".day-star");
+
+        header.onclick = () => { collapsedDays[day] = !collapsedDays[day]; card.classList.toggle("collapsed"); };
+
+        if (hasWildcard) {
+            starInHeader.onclick = (e) => {
+                e.stopPropagation(); // Stop from collapsing card
+                state.assignments[day].forEach(item => item.wildcard = false);
+                save();
+            };
+        }
 
         const content = document.createElement("div");
         content.className = "day-content";
