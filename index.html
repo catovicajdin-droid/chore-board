@@ -132,6 +132,7 @@
     .add-task-form { display: grid; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
     .del-btn { color: #dc2626; border: 1px solid #dc2626; background: #fef2f2; font-weight: bold; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; }
     .pts-input { width: 55px; text-align: center; }
+    .set-edit-box { display: flex; flex-direction: column; gap: 6px; flex: 1; }
   </style>
 </head>
 <body>
@@ -194,12 +195,14 @@
     </div>
 
     <div class="set-card task-manager">
-      <h2>Manage Tasks & Points</h2>
+      <h2>Manage Tasks & Frequencies</h2>
       <div class="add-task-form">
         <input type="text" id="newTaskName" placeholder="Task Name">
         <div style="display:flex; gap:8px;">
             <select id="newTaskFreq" style="flex:1;">
                 <option value="daily">Daily</option>
+                <option value="2x weekly">2x Weekly</option>
+                <option value="3x weekly">3x Weekly</option>
                 <option value="weekly">Weekly</option>
                 <option value="biweekly">Bi-Weekly</option>
                 <option value="monthly">Monthly</option>
@@ -236,7 +239,15 @@
     const DAYS = ["Ponedjeljak","Utorak","Srijeda","Cetvrtak","Petak","Subota","Nedjelja"];
     const ASSIGNEES = ["Amy","Aiden"];
     const LOCKED = { "d4": "Aiden" };
-    const FREQ_POINTS = { daily: 1, weekly: 5, "2x weekly": 5, "3x weekly": 5, biweekly: 10, monthly: 15, quarterly: 20 };
+    const FREQ_POINTS = {
+        "daily": 1,
+        "2x weekly": 5,
+        "3x weekly": 5,
+        "weekly": 5,
+        "biweekly": 10,
+        "monthly": 15,
+        "quarterly": 20
+    };
 
     let state = null;
     let settings = { goal: 100, customTasks: [], taskOverrides: {} };
@@ -279,7 +290,12 @@
     function getAllTasks() {
       const builtIn = DEFAULT_BUILT_IN.map(t => {
         const ov = (settings.taskOverrides || {})[t.id];
-        return ov ? { ...t, name: ov.name || t.name, points: ov.points } : t;
+        return ov ? {
+            ...t,
+            name: ov.name || t.name,
+            points: ov.points || t.points,
+            freq: ov.freq || t.freq
+        } : t;
       });
       return [...builtIn, ...(settings.customTasks || [])];
     }
@@ -348,7 +364,12 @@
 
       all.filter(t => t.freq !== "daily").forEach(t => {
         if (!appearsThisWeek(t, w)) return;
-        (t.days || [6]).forEach(di => {
+
+        let targetDays = t.days || [6];
+        if (t.freq === "2x weekly") targetDays = [1, 4]; // Tue, Fri
+        if (t.freq === "3x weekly") targetDays = [1, 3, 5]; // Tue, Thu, Sat
+
+        targetDays.forEach(di => {
           assignments[DAYS[di]].push({ id: t.id+"_"+di, taskId: t.id, name: t.name, freq: t.freq, assignee: ASSIGNEES[toggle], status: "pending", wildcard: false });
           toggle = 1 - toggle;
         });
@@ -412,7 +433,6 @@
             <span class="toggle-icon">▼</span>
           </div>`;
 
-        // Interactive day header star logic
         const header = card.querySelector(".day-header");
         const starInHeader = header.querySelector(".day-star");
 
@@ -420,7 +440,7 @@
 
         if (hasWildcard) {
             starInHeader.onclick = (e) => {
-                e.stopPropagation(); // Stop from collapsing card
+                e.stopPropagation();
                 state.assignments[day].forEach(item => item.wildcard = false);
                 save();
             };
@@ -467,11 +487,7 @@
                 Object.values(state.assignments).forEach(dayList => {
                     dayList.forEach(t => { if(t.wildcard) currentWildcardCount++; });
                 });
-
-                if (!item.wildcard && currentWildcardCount >= 2) {
-                    return alert("Maximum of 2 wildcard chores allowed per week!");
-                }
-
+                if (!item.wildcard && currentWildcardCount >= 2) return alert("Maximum of 2 wildcards allowed!");
                 item.wildcard = !item.wildcard;
                 save();
             };
@@ -610,25 +626,88 @@
 
     function renderSettings() {
       const edit = document.getElementById("taskListEditor"); edit.innerHTML = "";
+      const freqs = ["daily", "2x weekly", "3x weekly", "weekly", "biweekly", "monthly", "quarterly"];
+
+      const createFreqSelect = (currentVal, onUpdate) => {
+          const s = document.createElement("select");
+          freqs.forEach(f => {
+              const o = document.createElement("option");
+              o.value = f; o.textContent = f;
+              if (f === currentVal) o.selected = true;
+              s.appendChild(o);
+          });
+          s.onchange = (e) => onUpdate(e.target.value);
+          return s;
+      };
+
       DEFAULT_BUILT_IN.forEach(t => {
-        const ov = (settings.taskOverrides || {})[t.id] || { name: t.name, points: "" };
+        const ov = (settings.taskOverrides || {})[t.id] || { name: t.name, points: "", freq: t.freq };
         const row = document.createElement("div"); row.className = "set-row";
-        row.innerHTML = `<input type="text" value="${ov.name}" style="flex:1;"><input type="number" class="pts-input" value="${ov.points}" placeholder="Def"><button class="activate-btn" style="padding:4px 8px;">Add Now</button>`;
-        row.querySelectorAll("input").forEach(i => i.onchange = () => {
-            settings.taskOverrides = settings.taskOverrides || {};
-            settings.taskOverrides[t.id] = { name: row.querySelector('input[type="text"]').value, points: row.querySelector('input[type="number"]').value };
+
+        const editBox = document.createElement("div");
+        editBox.className = "set-edit-box";
+
+        const topRow = document.createElement("div");
+        topRow.style.display = "flex"; topRow.style.gap = "8px";
+        topRow.innerHTML = `<input type="text" value="${ov.name}" style="flex:1;"><input type="number" class="pts-input" value="${ov.points}" placeholder="Def">`;
+
+        const bottomRow = document.createElement("div");
+        bottomRow.style.display = "flex"; bottomRow.style.gap = "8px";
+        const fSel = createFreqSelect(ov.freq, (v) => {
+            settings.taskOverrides[t.id].freq = v;
             set(ref(db, "settings"), settings);
         });
-        row.querySelector(".activate-btn").onclick = () => injectTaskIntoCurrentBoard(t, DAYS[todayIndex]);
+        fSel.style.flex = "1";
+        bottomRow.appendChild(fSel);
+        bottomRow.innerHTML += `<button class="activate-btn">Add Now</button>`;
+
+        editBox.appendChild(topRow);
+        editBox.appendChild(bottomRow);
+        row.appendChild(editBox);
+
+        topRow.querySelectorAll("input").forEach(i => i.onchange = () => {
+            settings.taskOverrides = settings.taskOverrides || {};
+            settings.taskOverrides[t.id] = {
+                name: topRow.querySelector('input[type="text"]').value,
+                points: topRow.querySelector('input[type="number"]').value,
+                freq: fSel.value
+            };
+            set(ref(db, "settings"), settings);
+        });
+        editBox.querySelector(".activate-btn").onclick = () => injectTaskIntoCurrentBoard(getAllTasks().find(x => x.id === t.id), DAYS[todayIndex]);
         edit.appendChild(row);
       });
+
       (settings.customTasks || []).forEach((t, i) => {
         const row = document.createElement("div"); row.className = "set-row";
-        row.innerHTML = `<input type="text" value="${t.name}" style="flex:1;"><input type="number" class="pts-input" value="${t.points}"><button class="activate-btn" style="padding:4px 8px;">Add Now</button><button class="del-btn">DEL</button>`;
-        row.querySelector('input[type="text"]').onchange = (e) => { settings.customTasks[i].name = e.target.value; set(ref(db, "settings"), settings); };
-        row.querySelector('input[type="number"]').onchange = (e) => { settings.customTasks[i].points = e.target.value; set(ref(db, "settings"), settings); };
-        row.querySelector(".activate-btn").onclick = () => injectTaskIntoCurrentBoard(t, DAYS[todayIndex]);
-        row.querySelector(".del-btn").onclick = () => { settings.customTasks.splice(i,1); set(ref(db, "settings"), settings); };
+        const editBox = document.createElement("div");
+        editBox.className = "set-edit-box";
+
+        const topRow = document.createElement("div");
+        topRow.style.display = "flex"; topRow.style.gap = "8px";
+        topRow.innerHTML = `<input type="text" value="${t.name}" style="flex:1;"><input type="number" class="pts-input" value="${t.points}">`;
+
+        const bottomRow = document.createElement("div");
+        bottomRow.style.display = "flex"; bottomRow.style.gap = "8px";
+        const fSel = createFreqSelect(t.freq, (v) => {
+            settings.customTasks[i].freq = v;
+            set(ref(db, "settings"), settings);
+        });
+        fSel.style.flex = "1";
+        bottomRow.appendChild(fSel);
+        bottomRow.innerHTML += `<button class="activate-btn">Add Now</button><button class="del-btn">DEL</button>`;
+
+        editBox.appendChild(topRow);
+        editBox.appendChild(bottomRow);
+        row.appendChild(editBox);
+
+        topRow.querySelectorAll("input").forEach(inp => inp.onchange = () => {
+            settings.customTasks[i].name = topRow.querySelector('input[type="text"]').value;
+            settings.customTasks[i].points = topRow.querySelector('input[type="number"]').value;
+            set(ref(db, "settings"), settings);
+        });
+        editBox.querySelector(".activate-btn").onclick = () => injectTaskIntoCurrentBoard(t, DAYS[todayIndex]);
+        editBox.querySelector(".del-btn").onclick = () => { settings.customTasks.splice(i,1); set(ref(db, "settings"), settings); };
         edit.appendChild(row);
       });
     }
@@ -650,11 +729,7 @@
 
       settings.customTasks = settings.customTasks || [];
       settings.customTasks.push(newTask);
-
-      if (injectEl.checked) {
-          injectTaskIntoCurrentBoard(newTask, DAYS[todayIndex]);
-      }
-
+      if (injectEl.checked) injectTaskIntoCurrentBoard(newTask, DAYS[todayIndex]);
       set(ref(db, "settings"), settings);
       nameEl.value = "";
     };
@@ -675,35 +750,18 @@
     document.getElementById("wildcardBtn").onclick = () => {
       const wildcardTasks = [];
       Object.values(state.assignments).forEach(dayList => {
-          dayList.forEach(item => {
-              if (item.wildcard) wildcardTasks.push(item);
-          });
+          dayList.forEach(item => { if (item.wildcard) wildcardTasks.push(item); });
       });
-
-      if (wildcardTasks.length === 0) {
-          return alert("Error: No wildcard chores (⭐) selected for this week!");
-      }
-
-      const choice = prompt("Enter 'Amy' or 'Aiden' to set the wildcard loser for this week:");
+      if (wildcardTasks.length === 0) return alert("Error: No starred chores (⭐) selected!");
+      const choice = prompt("Enter 'Amy' or 'Aiden' to set the wildcard loser:");
       if (!choice) return;
-
       const loser = choice.trim().toLowerCase();
       const finalName = loser === 'amy' ? 'Amy' : (loser === 'aiden' ? 'Aiden' : null);
-
-      if (!finalName) {
-          return alert("Error: Please enter either 'Amy' or 'Aiden'.");
-      }
-
+      if (!finalName) return alert("Error: Please enter either 'Amy' or 'Aiden'.");
       Object.values(state.assignments).forEach(dayList => {
-          dayList.forEach(item => {
-              if (item.wildcard) {
-                  item.assignee = finalName;
-              }
-          });
+          dayList.forEach(item => { if (item.wildcard) item.assignee = finalName; });
       });
-
       save();
-      alert(`Success: All starred chores assigned to ${finalName}.`);
     };
 
     document.querySelectorAll(".filter-btn").forEach(btn => {
