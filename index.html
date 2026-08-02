@@ -226,6 +226,7 @@
     let currentFilter = "All";
     let collapsedDays = {};
     let activeProfile = localStorage.getItem('choreUserProfile') || null;
+    let pendingScrollToToday = false;
 
     const DEFAULT_BUILT_IN = [
       { id: "d1", name: "Sudje", freq: "daily" }, { id: "d2", name: "Dorucak", freq: "daily" },
@@ -301,7 +302,12 @@
           save();
         }
         render();
-        if (w === realWeek && Object.keys(collapsedDays).length === 0) scrollToToday();
+        if (w === realWeek && Object.keys(collapsedDays).length === 0) {
+            scrollToToday();
+        } else if (pendingScrollToToday) {
+            scrollToToday();
+            pendingScrollToToday = false;
+        }
       });
     }
 
@@ -530,7 +536,7 @@
         editor.appendChild(header);
 
         tasksInFreq.forEach(t => {
-            const isBuiltIn = t.id.length < 10; // Simple check for built-in IDs like 'd1', 'm2'
+            const isBuiltIn = t.id.length < 10;
             const stored = (settings.taskOverrides || {})[t.id] || {};
             const row = document.createElement("div"); row.className = "set-row";
 
@@ -574,7 +580,7 @@
 
     function scrollToToday() {
         const todayCard = document.querySelector(".day-card.today");
-        if (todayCard) {
+        if (todayCard && displayedWeek === realWeek) {
             collapsedDays[DAYS[todayIndex]] = false;
             todayCard.classList.remove("collapsed");
             todayCard.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -606,11 +612,20 @@
         document.getElementById("settingsView").classList.toggle("hidden");
     };
 
-    document.getElementById("todayBtn").onclick = scrollToToday;
+    document.getElementById("todayBtn").onclick = () => {
+        if (displayedWeek !== realWeek) {
+            displayedWeek = realWeek;
+            pendingScrollToToday = true;
+            loadWeek(displayedWeek);
+        } else {
+            scrollToToday();
+        }
+    };
+
     document.getElementById("prevWeek").onclick = () => { displayedWeek--; loadWeek(displayedWeek); };
     document.getElementById("nextWeek").onclick = () => { displayedWeek++; loadWeek(displayedWeek); };
     document.getElementById("reassign").onclick = async () => {
-        if(confirm("Reassign week?")) {
+        if(confirm("Reassign current week?")) {
             const prev = await get(ref(db, "board/week" + (displayedWeek-1)));
             state = generateWeek(displayedWeek, prev.val());
             save();
