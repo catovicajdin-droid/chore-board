@@ -102,7 +102,13 @@
 
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .set-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-    .freq-header { background: #f1f5f9; padding: 6px 12px; margin: 12px 0 6px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; }
+    .freq-group { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+    .freq-header { background: #f1f5f9; padding: 10px 12px; font-size: 0.75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+    .freq-header:after { content: '▼'; font-size: 0.6rem; transition: transform 0.2s; }
+    .freq-group.collapsed .freq-header:after { transform: rotate(-90deg); }
+    .freq-content { padding: 0 12px; display: block; }
+    .freq-group.collapsed .freq-content { display: none; }
+
     .add-task-form { display: grid; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
     input[type="text"], input[type="number"], select:not(.status-select) { padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; }
     .del-btn { color: #dc2626; border: 1px solid #dc2626; background: #fef2f2; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 800; }
@@ -225,6 +231,7 @@
     let settings = { goal: 100, customTasks: [], taskOverrides: {}, lastOccurrence: {} };
     let currentFilter = "All";
     let collapsedDays = {};
+    let collapsedSettingsFreqs = {};
     let activeProfile = localStorage.getItem('choreUserProfile') || null;
     let pendingScrollToToday = false;
 
@@ -533,10 +540,21 @@
         const tasksInFreq = allTasks.filter(t => t.freq === fType);
         if (tasksInFreq.length === 0) return;
 
+        const groupDiv = document.createElement("div");
+        groupDiv.className = "freq-group";
+        if (collapsedSettingsFreqs[fType] === undefined) collapsedSettingsFreqs[fType] = true;
+        if (collapsedSettingsFreqs[fType]) groupDiv.classList.add("collapsed");
+
         const header = document.createElement("div");
         header.className = "freq-header";
-        header.textContent = fType;
-        editor.appendChild(header);
+        header.textContent = fType + " (" + tasksInFreq.length + ")";
+        header.onclick = () => {
+            collapsedSettingsFreqs[fType] = !collapsedSettingsFreqs[fType];
+            groupDiv.classList.toggle("collapsed");
+        };
+
+        const content = document.createElement("div");
+        content.className = "freq-content";
 
         tasksInFreq.forEach(t => {
             const isBuiltIn = t.id.length < 10;
@@ -576,8 +594,12 @@
                     update(ref(db, "settings"), { customTasks: settings.customTasks });
                 };
             }
-            editor.appendChild(row);
+            content.appendChild(row);
         });
+
+        groupDiv.appendChild(header);
+        groupDiv.appendChild(content);
+        editor.appendChild(groupDiv);
       });
     }
 
