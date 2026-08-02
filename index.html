@@ -8,161 +8,128 @@
   <title>Chore Board Pro</title>
   <style>
     :root {
-      --amy: #ec4899; --aiden: #3b82f6; --bg: #f1f5f9;
-      --card: #ffffff; --text: #0f172a; --muted: #64748b;
-      --border: #e2e8f0; --accent: #4f46e5; --accent-hover: #4338ca;
-      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --amy: #ec4899; --aiden: #3b82f6; --bg: #f8fafc;
+      --card: #ffffff; --text: #1e293b; --muted: #64748b;
+      --border: #e2e8f0; --accent: #4f46e5;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg); color: var(--text);
-      padding: 16px; -webkit-tap-highlight-color: transparent;
-      line-height: 1.5;
+      padding: 12px; -webkit-tap-highlight-color: transparent;
+      scroll-behavior: smooth;
     }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    h1 { font-size: 1.2rem; font-weight: 800; color: var(--accent); }
+    .status { font-size: 0.7rem; padding: 4px 8px; border-radius: 999px; }
+    .status.on { color: #166534; }
+    .status.off { color: #991b1b; }
 
-    /* Modern Header */
-    header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.025em; color: var(--accent); }
-    .settings-btn {
-      background: var(--card); border: 1px solid var(--border);
-      padding: 8px; border-radius: 10px; cursor: pointer; box-shadow: var(--shadow);
-      transition: all 0.2s; font-size: 1.1rem;
-    }
-    .settings-btn:active { transform: scale(0.95); }
+    .hidden { display: none !important; }
 
-    /* Profile Pill */
-    .profile-bar {
-      display: flex; align-items: center; gap: 4px;
-      background: #e2e8f0; padding: 4px; border-radius: 999px;
-      margin-bottom: 20px; width: fit-content;
-    }
-    .profile-opt {
-      font-size: 0.75rem; padding: 6px 16px; border-radius: 999px;
-      cursor: pointer; color: var(--muted); font-weight: 600;
-      transition: all 0.2s;
-    }
-    .profile-opt.active.amy { background: var(--amy); color: #fff; }
-    .profile-opt.active.aiden { background: var(--aiden); color: #fff; }
+    /* Profile Selector */
+    .profile-bar { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 999px; margin-bottom: 12px; box-shadow: var(--shadow); }
+    .profile-label { font-size: 0.7rem; font-weight: bold; color: var(--muted); text-transform: uppercase; }
+    .profile-opt { font-size: 0.75rem; padding: 4px 12px; border-radius: 999px; cursor: pointer; border: 1px solid var(--border); background: #f1f5f9; color: var(--muted); transition: all 0.2s; }
+    .profile-opt.active.amy { background: var(--amy); color: #fff; border-color: var(--amy); }
+    .profile-opt.active.aiden { background: var(--aiden); color: #fff; border-color: var(--aiden); }
 
-    /* Modern Navigation Pill */
-    .nav-container {
-        background: var(--card); border-radius: 20px; padding: 16px;
-        margin-bottom: 20px; box-shadow: var(--shadow);
-    }
-    .week-nav {
-        display: flex; align-items: center; justify-content: space-between;
-        background: var(--bg); padding: 4px; border-radius: 12px; margin-bottom: 16px;
-    }
-    .nav-arrow {
-        border: none; background: var(--card); color: var(--text);
-        width: 36px; height: 36px; border-radius: 10px; cursor: pointer;
-        font-weight: bold; display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .week-label { font-weight: 700; font-size: 0.9rem; color: var(--text); }
-    .today-btn {
-        font-size: 0.7rem; font-weight: 700; color: var(--accent);
-        text-transform: uppercase; cursor: pointer; background: none; border: none;
-    }
+    .nav-container { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; box-shadow: var(--shadow); }
+    .week-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .week-label { font-weight: bold; font-size: 0.95rem; color: var(--accent); flex: 1; text-align: center; }
+    .today-btn { font-size: 0.7rem; padding: 4px 8px; background: #eef2ff; color: var(--accent); border: 1px solid #c7d2fe; border-radius: 6px; cursor: pointer; }
 
-    /* Reward Zone */
-    .reward-zone { border-top: 1px solid var(--border); padding-top: 16px; }
-    .score-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-    .score-card { background: var(--bg); border-radius: 12px; padding: 12px; text-align: center; }
-    .score-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
-    .score-value { font-size: 1.5rem; font-weight: 900; }
+    .reward-zone { border-top: 1px solid var(--border); padding-top: 12px; }
+    .score-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .score-card { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center; }
+    .score-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+    .score-value { font-size: 1.4rem; font-weight: bold; }
     .score-value.amy { color: var(--amy); }
     .score-value.aiden { color: var(--aiden); }
-    .progress-bg { background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
-    .progress-fill { background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+    .progress-bg { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 8px; }
+    .progress-fill { background: #22c55e; height: 100%; transition: width 0.4s ease; width: 0%; }
 
-    /* Action Buttons Bar */
-    .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-    .btn-action {
-        flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-        padding: 12px; border-radius: 12px; border: none; font-family: inherit;
-        font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s;
-        box-shadow: var(--shadow);
-    }
-    .btn-action.primary { background: var(--accent); color: white; }
-    .btn-action.secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-    .btn-action:active { transform: scale(0.97); opacity: 0.9; }
+    .filter-bar { display: flex; background: #e2e8f0; padding: 3px; border-radius: 10px; margin-bottom: 12px; }
+    .filter-btn { flex: 1; border: none; padding: 8px; font-size: 0.85rem; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-weight: 600; }
+    .filter-btn.active { background: white; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
-    /* Filters */
-    .filter-bar { display: flex; background: #e2e8f0; padding: 4px; border-radius: 14px; margin-bottom: 20px; }
-    .filter-btn {
-      flex: 1; border: none; padding: 8px; font-size: 0.8rem; border-radius: 10px;
-      background: transparent; color: var(--muted); cursor: pointer; font-weight: 600;
-    }
-    .filter-btn.active { background: white; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .btn-action { flex: 1; font-family: inherit; font-size: 0.85rem; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); cursor: pointer; font-weight: 700; box-shadow: var(--shadow); transition: all 0.2s; }
+    .btn-action.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-action:active { transform: scale(0.98); }
 
-    /* Board & Cards */
-    .board { display: grid; gap: 16px; }
-    .day-card {
-        background: var(--card); border-radius: 18px; padding: 16px;
-        position: relative; box-shadow: var(--shadow); border: 1px solid transparent;
-    }
-    .day-card.today { border-color: var(--accent); ring: 2px var(--accent); }
-    .today-tag {
-        position: absolute; top: -10px; right: 16px; background: var(--accent);
-        color: white; font-size: 0.6rem; font-weight: 800; padding: 4px 10px; border-radius: 999px;
-    }
+    .board { display: grid; gap: 12px; }
+    .day-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; position: relative; box-shadow: var(--shadow); scroll-margin-top: 20px; }
+    .day-card.today { border: 2px solid var(--accent); }
+    .today-tag { position: absolute; top: -10px; right: 10px; background: var(--accent); color: white; font-size: 0.65rem; padding: 2px 8px; border-radius: 999px; font-weight: 800; }
 
-    .day-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 12px; }
-    .day-title { font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
-    .toggle-icon { font-size: 0.75rem; color: var(--muted); opacity: 0.5; }
+    .day-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+    .day-title { font-size: 1rem; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+    .day-card.collapsed .day-content { display: none; }
+    .day-card.collapsed .toggle-icon { transform: rotate(-90deg); }
 
     ul { list-style: none; }
-    li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; }
-    li:last-child { border-bottom: none; }
+    li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .status-completed .task-name { text-decoration: line-through; opacity: 0.5; }
+    .status-incomplete .task-name { color: #dc2626; text-decoration: line-through; }
+    .status-notApplicable .task-name { font-style: italic; text-decoration: line-through; color: var(--muted); }
+    .task-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
 
-    .task-name { flex: 1; font-size: 0.9rem; font-weight: 600; color: #334155; }
-    .status-completed .task-name { text-decoration: line-through; opacity: 0.4; }
-
-    .assignee {
-        font-size: 0.7rem; padding: 8px 14px; border-radius: 999px;
-        color: #fff; cursor: pointer; border: none; font-weight: 800;
-    }
+    .assignee { font-size: 0.7rem; padding: 6px 12px; border-radius: 999px; color: #fff; cursor: pointer; border: none; font-weight: bold; transition: all 0.2s; }
     .assignee.amy { background: var(--amy); }
     .assignee.aiden { background: var(--aiden); }
     .assignee.transfer-pending { background: #6366f1; border: 2px dashed #fff; animation: pulse 1.5s infinite; }
-    .assignee.locked { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
+    .assignee.locked { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
 
-    .status-select { font-size: 0.75rem; padding: 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); }
-    .na-card { background: #eef2ff; border: 2px dashed #c7d2fe; border-radius: 20px; padding: 16px; margin-top: 20px; }
+    .status-select { font-size: 0.75rem; padding: 5px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; }
+    .row-tools { display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 6px; }
+    .day-select { font-size: 0.75rem; padding: 4px; border: 1px solid var(--border); border-radius: 6px; }
+    .push-btn { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; }
 
-    .hidden { display: none !important; }
+    .na-card { background: #f1f5f9; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; margin-top: 10px; }
+    .na-group { margin-bottom: 12px; border-radius: 8px; background: #fff; border: 1px solid var(--border); overflow: hidden; }
+    .na-group-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f8fafc; cursor: pointer; }
+    .na-group-title { font-size: 0.75rem; font-weight: 800; color: var(--muted); text-transform: uppercase; }
+    .na-group-content { padding: 0 10px; }
+    .na-group.collapsed .na-group-content { display: none; }
+    .na-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .na-item.is-active { opacity: 0.4; text-decoration: line-through; }
+    .activate-btn { font-size: 0.7rem; padding: 4px 10px; background: #fff; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+    .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    .set-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .add-task-form { display: grid; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
+    input[type="text"], input[type="number"], select:not(.status-select) { padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; }
+    .del-btn { color: #dc2626; border: 1px solid #dc2626; background: #fef2f2; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 800; }
+
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
   </style>
 </head>
 <body>
   <header>
-    <h1>🧹 Chore Board</h1>
-    <div style="display:flex;gap:10px;align-items:center;">
-        <span id="status" class="status off">●</span>
-        <button id="viewToggle" class="settings-btn">⚙️</button>
+    <h1>🧹 Chore Board Pro</h1>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="viewToggle" class="btn-action" style="padding:6px 10px;">⚙️</button>
+      <span id="status" class="status off">●</span>
     </div>
   </header>
 
   <div id="mainView">
     <div class="profile-bar">
-        <span class="profile-label" style="padding-left:10px; margin-right:5px;">Me:</span>
+        <span class="profile-label">Me:</span>
         <div class="profile-opt amy" data-user="Amy">Amy</div>
         <div class="profile-opt aiden" data-user="Aiden">Aiden</div>
     </div>
 
     <div class="nav-container">
       <div class="week-nav">
-        <button id="prevWeek" class="nav-arrow">‹</button>
+        <button id="prevWeek" class="btn-action" style="flex:0; padding:6px 12px;">◀</button>
         <div style="text-align:center;">
             <div class="week-label" id="weekLabel">Week --</div>
             <button id="todayBtn" class="today-btn">Go to Today</button>
         </div>
-        <button id="nextWeek" class="nav-arrow">›</button>
+        <button id="nextWeek" class="btn-action" style="flex:0; padding:6px 12px;">▶</button>
       </div>
       <div class="reward-zone">
         <div class="score-summary">
@@ -176,37 +143,53 @@
           </div>
         </div>
         <div class="progress-bg"><div id="progressBar" class="progress-fill"></div></div>
-        <div style="display:flex; justify-content: space-between; font-size:0.7rem; font-weight:700; color:var(--muted);">
-            <span>TOTAL: <span id="totalPoints" style="color:var(--text);">0</span></span>
-            <span>GOAL: <span id="goalText">100</span></span>
+        <div style="font-size: 0.75rem; text-align: center; color: var(--muted); font-weight: bold;">
+            <span id="totalPoints">0</span> / <span id="goalText">100</span> points
         </div>
       </div>
     </div>
 
     <div class="filter-bar">
-      <button class="filter-btn active" data-filter="All">Both Users</button>
-      <button class="filter-btn" data-filter="Amy">Amy</button>
-      <button class="filter-btn" data-filter="Aiden">Aiden</button>
+      <button class="filter-btn active" data-filter="All">All Chores</button>
+      <button class="filter-btn" data-filter="Amy">Amy's</button>
+      <button class="filter-btn" data-filter="Aiden">Aiden's</button>
     </div>
 
     <div class="controls">
-      <button id="reassign" class="btn-action primary">🔄 Reassign</button>
-      <button id="wildcardBtn" class="btn-action secondary">⭐ Wildcard</button>
+      <button id="reassign" class="btn-action primary">🔄 Reassign Week</button>
+      <button id="wildcardBtn" class="btn-action">⭐ Set Wildcard Loser</button>
     </div>
 
     <div id="board" class="board"></div>
   </div>
 
   <div id="settingsView" class="settings hidden">
-    <div class="nav-container">
-        <button onclick="document.getElementById('viewToggle').click()" class="btn-action secondary">← Back to Board</button>
+    <div class="set-card">
+      <h2 style="font-size:1rem; margin-bottom:12px;">Settings</h2>
+      <div class="set-row">
+        <label style="font-size:0.75rem; font-weight:bold; color:var(--muted);">Global Goal Points</label>
+        <input type="number" id="goalInput" value="100">
+      </div>
     </div>
-    <div class="nav-container">
-      <h2 style="font-size:1rem; margin-bottom:12px;">Global Goal</h2>
-      <input type="number" id="goalInput" value="100" style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--border);">
-    </div>
-    <div class="nav-container">
+
+    <div class="set-card">
       <h2 style="font-size:1rem; margin-bottom:12px;">Manage Tasks</h2>
+      <div class="add-task-form">
+        <input type="text" id="newTaskName" placeholder="New Task Name">
+        <div style="display:flex; gap:8px;">
+            <select id="newTaskFreq" style="flex:1;">
+                <option value="daily">Daily</option>
+                <option value="2x weekly">2x Weekly</option>
+                <option value="3x weekly">3x Weekly</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Bi-Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+            </select>
+            <input type="number" id="newTaskPts" placeholder="Pts" value="1" style="width:70px;">
+        </div>
+        <button id="addTaskBtn" class="btn-action primary">Add Task</button>
+      </div>
       <div id="taskListEditor"></div>
     </div>
   </div>
@@ -232,42 +215,29 @@
     const ASSIGNEES = ["Amy","Aiden"];
     const LOCKED = { "d4": "Aiden" };
     const FREQ_INTERVALS = { "daily": 0, "2x weekly": 1, "3x weekly": 1, "weekly": 1, "biweekly": 2, "monthly": 4, "quarterly": 12 };
+    const STATUS_PRIORITY = { "pending": 0, "incomplete": 1, "notApplicable": 2, "completed": 3 };
 
     let state = null;
-    let settings = { goal: 100, taskOverrides: {}, taskLastOccurrence: {} };
+    let settings = { goal: 100, customTasks: [], taskOverrides: {}, lastOccurrence: {} };
     let currentFilter = "All";
     let collapsedDays = {};
     let activeProfile = localStorage.getItem('choreUserProfile') || null;
 
     const DEFAULT_BUILT_IN = [
-      { id: "d1", name: "Sudje", freq: "daily" },
-      { id: "d2", name: "Dorucak", freq: "daily" },
-      { id: "d3", name: "Rucak", freq: "daily" },
-      { id: "d4", name: "Tuta", freq: "daily" },
-      { id: "d5", name: "Masina za ves/susilica", freq: "daily" },
-      { id: "d6", name: "Slaganje vesa", freq: "daily" },
-      { id: "d7", name: "Zatezanje kreveta", freq: "daily" },
-      { id: "d8", name: "Zatezanje stola/ugla i misc", freq: "daily" },
-      { id: "d9", name: "Mijenjanje Cafkine vode", freq: "daily" },
-      { id: "d10", name: "Punjenje elektronike", freq: "daily" },
-      { id: "d11", name: "Mijenjanje pijeska", freq: "daily" },
-      { id: "m1", name: "Ribanje sporeta", freq: "2x weekly" },
-      { id: "m2", name: "Mini-grocery", freq: "2x weekly" },
-      { id: "m3", name: "Usisavanje", freq: "2x weekly" },
-      { id: "m4", name: "Bacanje smeca", freq: "2x weekly" },
-      { id: "m5", name: "Ciscenje wc-a", freq: "3x weekly" },
-      { id: "w1", name: "Zalijevanje cvijeca", freq: "weekly" },
-      { id: "w2", name: "WC generalka", freq: "weekly" },
-      { id: "b1", name: "Mijenjanje posteljine", freq: "biweekly" },
-      { id: "mo1", name: "Pranje rerne", freq: "monthly" },
-      { id: "mo2", name: "Pranje prozora", freq: "monthly" },
-      { id: "mo3", name: "Pranje balkona", freq: "monthly" },
-      { id: "mo4", name: "Ciscenje ostave", freq: "monthly" },
-      { id: "mo5", name: "Usisavanje iza namjestaja", freq: "monthly" },
-      { id: "mo6", name: "Pranje usisivaca", freq: "monthly" },
-      { id: "mo7", name: "Pranje auta", freq: "monthly" },
-      { id: "mo8", name: "Ciscenje frizidera", freq: "monthly" },
-      { id: "mo9", name: "Placanje racuna", freq: "monthly" },
+      { id: "d1", name: "Sudje", freq: "daily" }, { id: "d2", name: "Dorucak", freq: "daily" },
+      { id: "d3", name: "Rucak", freq: "daily" }, { id: "d4", name: "Tuta", freq: "daily" },
+      { id: "d5", name: "Masina za ves/susilica", freq: "daily" }, { id: "d6", name: "Slaganje vesa", freq: "daily" },
+      { id: "d7", name: "Zatezanje kreveta", freq: "daily" }, { id: "d8", name: "Zatezanje stola/ugla i misc", freq: "daily" },
+      { id: "d9", name: "Mijenjanje Cafkine vode", freq: "daily" }, { id: "d10", name: "Punjenje elektronike", freq: "daily" },
+      { id: "d11", name: "Mijenjanje pijeska", freq: "daily" }, { id: "m1", name: "Ribanje sporeta", freq: "2x weekly" },
+      { id: "m2", name: "Mini-grocery", freq: "2x weekly" }, { id: "m3", name: "Usisavanje", freq: "2x weekly" },
+      { id: "m4", name: "Bacanje smeca", freq: "2x weekly" }, { id: "m5", name: "Ciscenje wc-a", freq: "3x weekly" },
+      { id: "w1", name: "Zalijevanje cvijeca", freq: "weekly" }, { id: "w2", name: "WC generalka", freq: "weekly" },
+      { id: "b1", name: "Mijenjanje posteljine", freq: "biweekly" }, { id: "mo1", name: "Pranje rerne", freq: "monthly" },
+      { id: "mo2", name: "Pranje prozora", freq: "monthly" }, { id: "mo3", name: "Pranje balkona", freq: "monthly" },
+      { id: "mo4", name: "Ciscenje ostave", freq: "monthly" }, { id: "mo5", name: "Usisavanje iza namjestaja", freq: "monthly" },
+      { id: "mo6", name: "Pranje usisivaca", freq: "monthly" }, { id: "mo7", name: "Pranje auta", freq: "monthly" },
+      { id: "mo8", name: "Ciscenje frizidera", freq: "monthly" }, { id: "mo9", name: "Placanje racuna", freq: "monthly" },
       { id: "q1", name: "Ciscenje odvoda", freq: "quarterly" }
     ];
 
@@ -276,16 +246,23 @@
         const ov = (settings.taskOverrides || {})[t.id];
         return ov ? { ...t, name: ov.name || t.name, points: ov.points || t.points, freq: ov.freq || t.freq } : t;
       });
-      return builtIn;
+      return [...builtIn, ...(settings.customTasks || [])];
     }
 
     function getPoints(item) {
-        const taskDef = getAllTasks().find(t => t.id === item.taskId);
-        if (taskDef && taskDef.points) return parseInt(taskDef.points);
-        if (item.name === "Rucak") return 3;
-        if (["Sudje", "Dorucak", "Slaganje vesa", "Tuta", "Mijenjanje pijeska"].includes(item.name)) return 2;
-        const ptsMap = { "daily": 1, "2x weekly": 5, "3x weekly": 5, "weekly": 5, "biweekly": 10, "monthly": 15, "quarterly": 20 };
-        return ptsMap[item.freq] || 1;
+      const taskDef = getAllTasks().find(t => t.id === item.taskId);
+      if (taskDef && taskDef.points) return parseInt(taskDef.points);
+      if (item.name === "Rucak") return 3;
+      if (["Sudje", "Dorucak", "Slaganje vesa", "Tuta", "Mijenjanje pijeska"].includes(item.name)) return 2;
+      const ptsMap = { "daily": 1, "2x weekly": 5, "3x weekly": 5, "weekly": 5, "biweekly": 10, "monthly": 15, "quarterly": 20 };
+      return ptsMap[item.freq] || 1;
+    }
+
+    function getWeeksUntil(t, currentW) {
+        const interval = FREQ_INTERVALS[t.freq] || 0;
+        const lastW = (settings.lastOccurrence || {})[t.id] || (currentW - interval - 1);
+        const wait = interval - (currentW - lastW);
+        return wait > 0 ? wait : 0;
     }
 
     function getWeekNumber(d) {
@@ -301,7 +278,7 @@
     let displayedWeek = realWeek;
 
     onValue(ref(db, "settings"), (snap) => {
-      settings = Object.assign({ goal: 100, taskOverrides: {}, taskLastOccurrence: {} }, snap.val());
+      settings = Object.assign({ goal: 100, customTasks: [], taskOverrides: {}, lastOccurrence: {} }, snap.val());
       document.getElementById("goalInput").value = settings.goal;
       document.getElementById("goalText").textContent = settings.goal;
       if (state) render();
@@ -310,15 +287,16 @@
 
     function loadWeek(w) {
       onValue(ref(db, "board/week" + w), async (snap) => {
-        document.getElementById("status").style.color = "#22c55e";
+        document.getElementById("status").classList.replace("off", "on");
         state = snap.val();
-        document.getElementById("weekLabel").textContent = "Week " + w;
+        document.getElementById("weekLabel").textContent = "Week " + w + (w === realWeek ? " (Today)" : "");
         if (!state && w >= realWeek) {
           const prevSnap = await get(ref(db, "board/week" + (w-1)));
           state = generateWeek(w, prevSnap.val());
           save();
         }
         render();
+        if (w === realWeek && Object.keys(collapsedDays).length === 0) scrollToToday();
       });
     }
 
@@ -326,7 +304,7 @@
       const assignments = {};
       DAYS.forEach(d => assignments[d] = []);
       const all = getAllTasks();
-      const lastOccurrence = settings.taskLastOccurrence || {};
+      const lastOccurrence = settings.lastOccurrence || {};
 
       const incompleteCarryovers = {};
       if (prevWeekData?.assignments) {
@@ -341,12 +319,10 @@
       all.forEach(t => {
         const interval = FREQ_INTERVALS[t.freq] || 0;
         const lastW = lastOccurrence[t.id] || (w - interval - 1);
-
         const shouldAppear = (t.freq === 'daily') || (w - lastW >= interval);
 
         if (shouldAppear) {
           const targetDays = (t.freq === '2x weekly') ? [1, 4] : (t.freq === '3x weekly' ? [1, 3, 5] : (t.freq === 'daily' ? [0,1,2,3,4,5,6] : [6]));
-
           targetDays.forEach(di => {
             const carry = incompleteCarryovers[t.id];
             assignments[DAYS[di]].push({
@@ -356,11 +332,10 @@
             });
             if (!LOCKED[t.id] && !carry) toggle = 1 - toggle;
           });
-          // Update tracker
           lastOccurrence[t.id] = w;
         }
       });
-      set(ref(db, "settings/taskLastOccurrence"), lastOccurrence);
+      update(ref(db, "settings"), { lastOccurrence });
       return { assignments, week: w };
     }
 
@@ -373,50 +348,76 @@
 
       DAYS.forEach((day, dayIdx) => {
         const items = state.assignments[day] || [];
-        const isToday = dayIdx === todayIndex && displayedWeek === realWeek;
-        const hasWildcard = items.some(i => i.wildcard);
+        items.sort((a, b) => STATUS_PRIORITY[a.status || "pending"] - STATUS_PRIORITY[b.status || "pending"] || getPoints(b) - getPoints(a));
 
         const visibleItems = currentFilter === "All" ? items : items.filter(i => i.assignee === currentFilter);
         if (visibleItems.length === 0 && currentFilter !== "All") return;
 
+        const isToday = dayIdx === todayIndex && displayedWeek === realWeek;
+        const hasWildcard = items.some(i => i.wildcard);
         const card = document.createElement("div");
         card.className = "day-card" + (isToday ? " today" : "");
         if (collapsedDays[day] === undefined) collapsedDays[day] = !isToday;
-        if (collapsedDays[day]) card.classList.add("hidden-content"); // Logic changed to just class toggle
+        if (collapsedDays[day]) card.classList.add("collapsed");
 
         card.innerHTML = `
-          ${isToday ? '<div class="today-tag">TODAY</div>' : ''}
-          <div class="day-header" onclick="this.nextElementSibling.classList.toggle('hidden');">
+          ${isToday ? '<div class="today-tag">DANAS</div>' : ''}
+          <div class="day-header">
             <div class="day-title">${day} ${hasWildcard ? '<span style="color:#f59e0b">⭐</span>' : ''}</div>
-            <div class="toggle-icon">▼</div>
+            <span class="toggle-icon">▼</span>
           </div>
-          <ul class="${collapsedDays[day] ? 'hidden' : ''}"></ul>`;
+          <div class="day-content"><ul></ul></div>`;
+
+        card.querySelector(".day-header").onclick = () => { collapsedDays[day] = !collapsedDays[day]; card.classList.toggle("collapsed"); };
 
         const ul = card.querySelector("ul");
         items.forEach(item => {
-          if (item.status === "completed") {
-            if (item.assignee === "Amy") amyPts += getPoints(item); else aidenPts += getPoints(item);
-          }
-          const li = document.createElement("li");
-          li.className = "status-" + (item.status || "pending") + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
+          const status = item.status || "pending";
+          if (status === "completed") { if (item.assignee === "Amy") amyPts += getPoints(item); else aidenPts += getPoints(item); }
 
-          const isLocked = !activeProfile || (item.transferTo && activeProfile !== item.transferTo && activeProfile !== item.transferInitiator) || (!item.transferTo && activeProfile !== item.assignee);
+          const li = document.createElement("li");
+          li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
+          const isTransferPending = !!item.transferTo;
+          const isLocked = !activeProfile || (isTransferPending && activeProfile !== item.transferTo && activeProfile !== item.transferInitiator) || (!isTransferPending && activeProfile !== item.assignee);
 
           li.innerHTML = `
             <select class="status-select">
-                <option value="pending" ${item.status==='pending'?'selected':''}>⏳</option>
-                <option value="completed" ${item.status==='completed'?'selected':''}>✅</option>
-                <option value="incomplete" ${item.status==='incomplete'?'selected':''}>❌</option>
-                <option value="notApplicable" ${item.status==='notApplicable'?'selected':''}>➖</option>
+                <option value="pending" ${status==='pending'?'selected':''}>⏳</option>
+                <option value="completed" ${status==='completed'?'selected':''}>✅</option>
+                <option value="incomplete" ${status==='incomplete'?'selected':''}>❌</option>
+                <option value="notApplicable" ${status==='notApplicable'?'selected':''}>➖</option>
             </select>
             <div class="task-name">${item.wildcard?'⭐ ':''}${item.name}</div>
-            <button class="assignee ${item.assignee.toLowerCase()} ${isLocked?'locked':''} ${item.transferTo?'transfer-pending':''}">
-                ${item.transferTo ? '➔' + item.transferTo : item.assignee}
+            <button class="assignee ${item.assignee.toLowerCase()} ${isLocked?'locked':''} ${isTransferPending?'transfer-pending':''}">
+                ${isTransferPending ? item.assignee + '➔' + item.transferTo : item.assignee}
             </button>
-          `;
+            <div class="row-tools">
+                ${item.freq!=='daily'?`<select class="day-select"></select><button class="push-btn">Next Week ⏭</button>`:''}
+                ${item.isManual ? '<button class="del-btn" style="padding:4px">UNDO</button>' : ''}
+            </div>`;
 
           li.querySelector(".status-select").onchange = (e) => { item.status = e.target.value; save(); };
           li.querySelector(".assignee").onclick = () => handleTransfer(item);
+
+          if (item.isManual) {
+              li.querySelector(".del-btn").onclick = () => {
+                  state.assignments[day] = state.assignments[day].filter(x => x.id !== item.id);
+                  // We don't reset lastOccurrence here because that would make it "Due Now" immediately.
+                  // If user wants it back in Not Due properly, they just reassign.
+                  save();
+              };
+          }
+
+          if (item.freq !== 'daily') {
+              const sel = li.querySelector(".day-select");
+              DAYS.forEach(d => { const opt = document.createElement("option"); opt.value = d; opt.textContent = d; if(d === day) opt.selected = true; sel.appendChild(opt); });
+              sel.onchange = () => {
+                  state.assignments[day] = state.assignments[day].filter(x => x.id !== item.id);
+                  state.assignments[sel.value].push(item);
+                  save();
+              };
+              li.querySelector(".push-btn").onclick = () => moveTaskToNextWeek(item, day);
+          }
           ul.appendChild(li);
         });
         board.appendChild(card);
@@ -433,105 +434,185 @@
     function handleTransfer(item) {
         const other = item.assignee === "Amy" ? "Aiden" : "Amy";
         if (!item.transferTo) {
-            if (confirm(`Send to ${other}?`)) { item.transferTo = other; item.transferInitiator = activeProfile; save(); }
+            if (confirm(`Request transfer to ${other}?`)) { item.transferTo = other; item.transferInitiator = activeProfile; save(); }
         } else {
             if (activeProfile === item.transferInitiator) {
-                if (confirm(`Cancel transfer?`)) { item.transferTo = null; item.transferInitiator = null; save(); }
+                if (confirm(`Cancel your transfer request?`)) { item.transferTo = null; item.transferInitiator = null; save(); }
             } else if (activeProfile === item.transferTo) {
-                if (confirm(`Accept this task?`)) { item.assignee = item.transferTo; item.transferTo = null; item.transferInitiator = null; save(); }
+                if (confirm(`Accept transfer of "${item.name}"?`)) { item.assignee = item.transferTo; item.transferTo = null; item.transferInitiator = null; save(); }
             }
         }
     }
 
+    async function moveTaskToNextWeek(item, day) {
+        const nextW = displayedWeek + 1;
+        const nextSnap = await get(ref(db, "board/week" + nextW));
+        let nextState = nextSnap.val();
+        if (!nextState) nextState = generateWeek(nextW, state);
+        nextState.assignments[day].push({ ...item, status: "pending", transferTo: null, transferInitiator: null });
+        await set(ref(db, "board/week" + nextW), nextState);
+        state.assignments[day] = state.assignments[day].filter(x => x.id !== item.id);
+        save();
+    }
+
     function renderNotDue() {
-        const activeIds = new Set();
-        Object.values(state.assignments).forEach(dayList => dayList.forEach(i => activeIds.add(i.taskId)));
-        const all = getAllTasks().filter(t => t.freq !== 'daily');
-        const lastOccurrence = settings.taskLastOccurrence || {};
+      const activeIds = new Set();
+      Object.values(state.assignments).forEach(dayList => dayList.forEach(i => activeIds.add(i.taskId)));
+      const all = getAllTasks().filter(t => t.freq !== 'daily');
+      const groups = { next: [], two: [], far: [] };
 
-        const card = document.createElement("div");
-        card.className = "na-card";
-        card.innerHTML = `<h2 style="font-size:0.9rem; margin-bottom:12px; font-weight:800; color:var(--accent);">Not Due This Week</h2>`;
+      all.forEach(t => {
+          const wait = getWeeksUntil(t, displayedWeek);
+          const data = { task: t, wait, isActive: activeIds.has(t.id) };
+          if (wait === 1) groups.next.push(data);
+          else if (wait === 2) groups.two.push(data);
+          else groups.far.push(data);
+      });
 
-        all.forEach(t => {
-            const interval = FREQ_INTERVALS[t.freq];
-            const lastW = lastOccurrence[t.id] || (displayedWeek - interval - 1);
-            const wait = interval - (displayedWeek - lastW);
-            const isActive = activeIds.has(t.id);
-
-            const div = document.createElement("div");
-            div.style = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.05);";
-            div.innerHTML = `
-                <div style="${isActive ? 'opacity:0.3; text-decoration:line-through;' : ''}">
-                    <div style="font-size:0.85rem; font-weight:700;">${t.name}</div>
-                    <div style="font-size:0.65rem; color:var(--muted);">${t.freq} ${isActive ? '' : '(Due in '+wait+'w)'}</div>
-                </div>
-                ${isActive ? '' : '<button class="activate-btn">Activate +</button>'}
-            `;
-            if (!isActive) div.querySelector("button").onclick = () => {
-                injectTask(t);
-                // Reset counter in settings
-                const updates = {};
-                updates[`taskLastOccurrence/${t.id}`] = displayedWeek;
-                update(ref(db, "settings"), updates);
-            };
-            card.appendChild(div);
-        });
-        board.appendChild(card);
+      const naCard = document.createElement("div"); naCard.className = "na-card"; naCard.innerHTML = `<h2>Not Due This Week</h2>`;
+      const createGroup = (title, list) => {
+          if (list.length === 0) return;
+          const g = document.createElement("div"); g.className = "na-group";
+          g.innerHTML = `<div class="na-group-header"><div class="na-group-title">${title}</div><span>▼</span></div><div class="na-group-content"></div>`;
+          g.querySelector(".na-group-header").onclick = () => g.classList.toggle("collapsed");
+          const content = g.querySelector(".na-group-content");
+          list.forEach(entry => {
+              const div = document.createElement("div"); div.className = "na-item" + (entry.isActive ? " is-active" : "");
+              div.innerHTML = `<div><div style="font-size:0.8rem; font-weight:700;">${entry.task.name}</div><div style="font-size:0.6rem; color:var(--muted);">${entry.task.freq} (Wait: ${entry.wait}w)</div></div>
+                ${entry.isActive ? '' : '<button class="activate-btn">Activate +</button>'}`;
+              if (!entry.isActive) div.querySelector("button").onclick = () => {
+                  injectTask(entry.task);
+                  const lastOccurrence = settings.lastOccurrence || {};
+                  lastOccurrence[entry.task.id] = displayedWeek;
+                  update(ref(db, "settings"), { lastOccurrence });
+              };
+              content.appendChild(div);
+          });
+          naCard.appendChild(g);
+      };
+      createGroup("Due Next Week", groups.next);
+      createGroup("Due in 2 Weeks", groups.two);
+      createGroup("3 Weeks or Later", groups.far);
+      board.appendChild(naCard);
     }
 
     function injectTask(t) {
-        if (!state.assignments["Nedjelja"]) state.assignments["Nedjelja"] = [];
-        state.assignments["Nedjelja"].push({
-            id: t.id + "_" + Date.now(), taskId: t.id, name: t.name, freq: t.freq,
-            assignee: activeProfile || "Amy", status: "pending", wildcard: false, transferTo: null
-        });
+        state.assignments["Nedjelja"].push({ id: t.id+"_"+Date.now(), taskId: t.id, name: t.name, freq: t.freq, assignee: activeProfile || "Amy", status: "pending", wildcard: false, isManual: true });
         save();
     }
 
     function renderSettings() {
-        const edit = document.getElementById("taskListEditor"); edit.innerHTML = "";
-        getAllTasks().forEach(t => {
-            const row = document.createElement("div");
-            row.style = "padding:12px 0; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;";
-            row.innerHTML = `<div style="font-size:0.85rem; font-weight:600;">${t.name} (${t.freq})</div><button class="today-btn" style="color:red">Reset</button>`;
-            edit.appendChild(row);
-        });
+      const editor = document.getElementById("taskListEditor"); editor.innerHTML = "";
+      const freqs = ["daily", "2x weekly", "3x weekly", "weekly", "biweekly", "monthly", "quarterly"];
+
+      // Process Built-in Overrides
+      DEFAULT_BUILT_IN.forEach(t => {
+        const stored = (settings.taskOverrides || {})[t.id] || {};
+        const row = document.createElement("div"); row.className = "set-row";
+        row.innerHTML = `
+            <div style="display:flex; gap:8px;"><input type="text" value="${stored.name || t.name}" class="name-edit" style="flex:1;"><input type="number" value="${stored.points || ''}" placeholder="Def" class="pts-edit" style="width:60px;"></div>
+            <div style="display:flex; gap:8px;">
+                <select class="freq-edit" style="flex:1;"></select>
+                <button class="activate-btn add-now">Add Now</button>
+            </div>`;
+        const fSel = row.querySelector(".freq-edit");
+        freqs.forEach(f => { const opt = document.createElement("option"); opt.value = f; opt.textContent = f; if(f === (stored.freq || t.freq)) opt.selected = true; fSel.appendChild(opt); });
+
+        const saveChanges = () => {
+            settings.taskOverrides[t.id] = { name: row.querySelector(".name-edit").value, points: row.querySelector(".pts-edit").value, freq: fSel.value };
+            update(ref(db, "settings"), { taskOverrides: settings.taskOverrides });
+        };
+        row.querySelectorAll("input, select").forEach(el => el.onchange = saveChanges);
+        row.querySelector(".add-now").onclick = () => injectTask(getAllTasks().find(x => x.id === t.id));
+        editor.appendChild(row);
+      });
+
+      // Process Custom Tasks
+      (settings.customTasks || []).forEach((t, i) => {
+          const row = document.createElement("div"); row.className = "set-row";
+          row.innerHTML = `
+            <div style="display:flex; gap:8px;"><input type="text" value="${t.name}" class="name-edit" style="flex:1;"><input type="number" value="${t.points}" class="pts-edit" style="width:60px;"></div>
+            <div style="display:flex; gap:8px;">
+                <select class="freq-edit" style="flex:1;"></select>
+                <button class="activate-btn add-now">Add Now</button>
+                <button class="del-btn">DEL</button>
+            </div>`;
+          const fSel = row.querySelector(".freq-edit");
+          freqs.forEach(f => { const opt = document.createElement("option"); opt.value = f; opt.textContent = f; if(f === t.freq) opt.selected = true; fSel.appendChild(opt); });
+
+          row.querySelectorAll("input, select").forEach(el => el.onchange = () => {
+              settings.customTasks[i] = { ...t, name: row.querySelector(".name-edit").value, points: row.querySelector(".pts-edit").value, freq: fSel.value };
+              update(ref(db, "settings"), { customTasks: settings.customTasks });
+          });
+          row.querySelector(".add-now").onclick = () => injectTask(t);
+          row.querySelector(".del-btn").onclick = () => { settings.customTasks.splice(i,1); update(ref(db, "settings"), { customTasks: settings.customTasks }); };
+          editor.appendChild(row);
+      });
     }
+
+    function scrollToToday() {
+        const todayCard = document.querySelector(".day-card.today");
+        if (todayCard) {
+            collapsedDays[DAYS[todayIndex]] = false;
+            todayCard.classList.remove("collapsed");
+            todayCard.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }
+
+    document.getElementById("addTaskBtn").onclick = () => {
+        const name = document.getElementById("newTaskName").value;
+        if(!name) return;
+        const newTask = { id: "cust_"+Date.now(), name, freq: document.getElementById("newTaskFreq").value, points: document.getElementById("newTaskPts").value };
+        settings.customTasks.push(newTask);
+        update(ref(db, "settings"), { customTasks: settings.customTasks });
+        document.getElementById("newTaskName").value = "";
+    };
+
+    document.getElementById("wildcardBtn").onclick = () => {
+        const tasks = [];
+        Object.values(state.assignments).forEach(day => day.forEach(i => { if(i.wildcard) tasks.push(i); }));
+        if(tasks.length === 0) return alert("Select ⭐ tasks first!");
+        const loser = prompt("Who lost? (Amy/Aiden)");
+        if(!loser) return;
+        const final = loser.trim().toLowerCase() === 'amy' ? 'Amy' : 'Aiden';
+        Object.values(state.assignments).forEach(day => day.forEach(i => { if(i.wildcard) i.assignee = final; }));
+        save();
+    };
 
     document.getElementById("viewToggle").onclick = () => {
         document.getElementById("mainView").classList.toggle("hidden");
         document.getElementById("settingsView").classList.toggle("hidden");
     };
 
+    document.getElementById("todayBtn").onclick = scrollToToday;
     document.getElementById("prevWeek").onclick = () => { displayedWeek--; loadWeek(displayedWeek); };
     document.getElementById("nextWeek").onclick = () => { displayedWeek++; loadWeek(displayedWeek); };
-    document.getElementById("todayBtn").onclick = () => { displayedWeek = realWeek; loadWeek(displayedWeek); };
     document.getElementById("reassign").onclick = async () => {
-        if(confirm("Reassign? This will recalculate due dates.")) {
+        if(confirm("Reassign? This restores incomplete tasks to original users.")) {
             const prev = await get(ref(db, "board/week" + (displayedWeek-1)));
             state = generateWeek(displayedWeek, prev.val());
             save();
         }
     };
 
-    // Profile selector init
     document.querySelectorAll('.profile-opt').forEach(opt => {
-        if (opt.dataset.user === activeProfile) opt.classList.add('active');
         opt.onclick = () => {
             document.querySelectorAll('.profile-opt').forEach(o => o.classList.remove('active'));
             opt.classList.add('active');
             activeProfile = opt.dataset.user;
             localStorage.setItem('choreUserProfile', activeProfile);
+            currentFilter = activeProfile;
+            document.querySelectorAll('.filter-btn').forEach(fb => fb.classList.toggle('active', fb.dataset.filter === activeProfile));
             render();
         };
+        if(opt.dataset.user === activeProfile) opt.classList.add('active');
     });
 
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.onclick = () => {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            currentFilter = btn.dataset.filter || btn.textContent;
+            currentFilter = btn.dataset.filter;
             render();
         };
     });
