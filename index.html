@@ -102,6 +102,7 @@
 
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .set-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .freq-header { background: #f1f5f9; padding: 6px 12px; margin: 12px 0 6px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; }
     .add-task-form { display: grid; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 12px; margin-bottom: 12px; }
     input[type="text"], input[type="number"], select:not(.status-select) { padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; }
     .del-btn { color: #dc2626; border: 1px solid #dc2626; background: #fef2f2; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 0.7rem; font-weight: 800; }
@@ -514,49 +515,60 @@
 
     function renderSettings() {
       const editor = document.getElementById("taskListEditor"); editor.innerHTML = "";
+      const freqOrder = ["daily", "2x weekly", "3x weekly", "weekly", "biweekly", "monthly", "quarterly"];
       const freqs = ["daily", "2x weekly", "3x weekly", "weekly", "biweekly", "monthly", "quarterly"];
 
-      DEFAULT_BUILT_IN.forEach(t => {
-        const stored = (settings.taskOverrides || {})[t.id] || {};
-        const row = document.createElement("div"); row.className = "set-row";
-        row.innerHTML = `
-            <div style="display:flex; gap:8px;"><input type="text" value="${stored.name || t.name}" class="name-edit" style="flex:1;"><input type="number" value="${stored.points || ''}" placeholder="Def" class="pts-edit" style="width:60px;"></div>
-            <div style="display:flex; gap:8px;">
-                <select class="freq-edit" style="flex:1;"></select>
-                <button class="activate-btn add-now">Add Now</button>
-            </div>`;
-        const fSel = row.querySelector(".freq-edit");
-        freqs.forEach(f => { const opt = document.createElement("option"); opt.value = f; opt.textContent = f; if(f === (stored.freq || t.freq)) opt.selected = true; fSel.appendChild(opt); });
+      const allTasks = getAllTasks();
 
-        const saveChanges = () => {
-            if(!settings.taskOverrides[t.id]) settings.taskOverrides[t.id] = {};
-            settings.taskOverrides[t.id] = { name: row.querySelector(".name-edit").value, points: row.querySelector(".pts-edit").value, freq: fSel.value };
-            update(ref(db, "settings"), { taskOverrides: settings.taskOverrides });
-        };
-        row.querySelectorAll("input, select").forEach(el => el.onchange = saveChanges);
-        row.querySelector(".add-now").onclick = () => injectTask(getAllTasks().find(x => x.id === t.id));
-        editor.appendChild(row);
-      });
+      freqOrder.forEach(fType => {
+        const tasksInFreq = allTasks.filter(t => t.freq === fType);
+        if (tasksInFreq.length === 0) return;
 
-      (settings.customTasks || []).forEach((t, i) => {
-          const row = document.createElement("div"); row.className = "set-row";
-          row.innerHTML = `
-            <div style="display:flex; gap:8px;"><input type="text" value="${t.name}" class="name-edit" style="flex:1;"><input type="number" value="${t.points}" class="pts-edit" style="width:60px;"></div>
-            <div style="display:flex; gap:8px;">
-                <select class="freq-edit" style="flex:1;"></select>
-                <button class="activate-btn add-now">Add Now</button>
-                <button class="del-btn">DEL</button>
-            </div>`;
-          const fSel = row.querySelector(".freq-edit");
-          freqs.forEach(f => { const opt = document.createElement("option"); opt.value = f; opt.textContent = f; if(f === t.freq) opt.selected = true; fSel.appendChild(opt); });
+        const header = document.createElement("div");
+        header.className = "freq-header";
+        header.textContent = fType;
+        editor.appendChild(header);
 
-          row.querySelectorAll("input, select").forEach(el => el.onchange = () => {
-              settings.customTasks[i] = { ...t, name: row.querySelector(".name-edit").value, points: row.querySelector(".pts-edit").value, freq: fSel.value };
-              update(ref(db, "settings"), { customTasks: settings.customTasks });
-          });
-          row.querySelector(".add-now").onclick = () => injectTask(t);
-          row.querySelector(".del-btn").onclick = () => { settings.customTasks.splice(i,1); update(ref(db, "settings"), { customTasks: settings.customTasks }); };
-          editor.appendChild(row);
+        tasksInFreq.forEach(t => {
+            const isBuiltIn = t.id.length < 10; // Simple check for built-in IDs like 'd1', 'm2'
+            const stored = (settings.taskOverrides || {})[t.id] || {};
+            const row = document.createElement("div"); row.className = "set-row";
+
+            row.innerHTML = `
+                <div style="display:flex; gap:8px;"><input type="text" value="${stored.name || t.name}" class="name-edit" style="flex:1;"><input type="number" value="${stored.points || ''}" placeholder="Def" class="pts-edit" style="width:60px;"></div>
+                <div style="display:flex; gap:8px;">
+                    <select class="freq-edit" style="flex:1;"></select>
+                    <button class="activate-btn add-now">Add Now</button>
+                    ${!isBuiltIn ? '<button class="del-btn">DEL</button>' : ''}
+                </div>`;
+
+            const fSel = row.querySelector(".freq-edit");
+            freqs.forEach(f => { const opt = document.createElement("option"); opt.value = f; opt.textContent = f; if(f === t.freq) opt.selected = true; fSel.appendChild(opt); });
+
+            const saveChanges = () => {
+                if (isBuiltIn) {
+                    if(!settings.taskOverrides[t.id]) settings.taskOverrides[t.id] = {};
+                    settings.taskOverrides[t.id] = { name: row.querySelector(".name-edit").value, points: row.querySelector(".pts-edit").value, freq: fSel.value };
+                    update(ref(db, "settings"), { taskOverrides: settings.taskOverrides });
+                } else {
+                    const idx = settings.customTasks.findIndex(ct => ct.id === t.id);
+                    if (idx !== -1) {
+                        settings.customTasks[idx] = { ...t, name: row.querySelector(".name-edit").value, points: row.querySelector(".pts-edit").value, freq: fSel.value };
+                        update(ref(db, "settings"), { customTasks: settings.customTasks });
+                    }
+                }
+            };
+
+            row.querySelectorAll("input, select").forEach(el => el.onchange = saveChanges);
+            row.querySelector(".add-now").onclick = () => injectTask(t);
+            if (!isBuiltIn) {
+                row.querySelector(".del-btn").onclick = () => {
+                    settings.customTasks = settings.customTasks.filter(ct => ct.id !== t.id);
+                    update(ref(db, "settings"), { customTasks: settings.customTasks });
+                };
+            }
+            editor.appendChild(row);
+        });
       });
     }
 
