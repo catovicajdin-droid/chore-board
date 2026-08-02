@@ -76,6 +76,9 @@
     .status-notApplicable .task-name { font-style: italic; text-decoration: line-through; color: var(--muted); }
     .task-name { flex: 1; font-size: 0.9rem; font-weight: 600; }
 
+    .star-btn { font-size: 1.1rem; background: none; border: none; cursor: pointer; opacity: 0.2; filter: grayscale(1); transition: all 0.2s; }
+    .star-btn.active { opacity: 1; filter: grayscale(0); }
+
     .assignee { font-size: 0.7rem; padding: 6px 12px; border-radius: 999px; color: #fff; cursor: pointer; border: none; font-weight: bold; transition: all 0.2s; }
     .assignee.amy { background: var(--amy); }
     .assignee.aiden { background: var(--aiden); }
@@ -260,7 +263,8 @@
 
     function getWeeksUntil(t, currentW) {
         const interval = FREQ_INTERVALS[t.freq] || 0;
-        const lastW = (settings.lastOccurrence || {})[t.id] || (currentW - interval - 1);
+        const lastW = (settings.lastOccurrence || {})[t.id];
+        if (lastW === undefined) return 0;
         const wait = interval - (currentW - lastW);
         return wait > 0 ? wait : 0;
     }
@@ -318,8 +322,8 @@
 
       all.forEach(t => {
         const interval = FREQ_INTERVALS[t.freq] || 0;
-        const lastW = lastOccurrence[t.id] || (w - interval - 1);
-        const shouldAppear = (t.freq === 'daily') || (w - lastW >= interval);
+        const lastW = lastOccurrence[t.id];
+        const shouldAppear = (t.freq === 'daily') || (lastW === undefined) || (w - lastW >= interval);
 
         if (shouldAppear) {
           const targetDays = (t.freq === '2x weekly') ? [1, 4] : (t.freq === '3x weekly' ? [1, 3, 5] : (t.freq === 'daily' ? [0,1,2,3,4,5,6] : [6]));
@@ -388,6 +392,7 @@
                 <option value="notApplicable" ${status==='notApplicable'?'selected':''}>➖</option>
             </select>
             <div class="task-name">${item.wildcard?'⭐ ':''}${item.name}</div>
+            ${item.freq !== 'daily' ? `<button class="star-btn ${item.wildcard?'active':''}">⭐</button>` : ''}
             <button class="assignee ${item.assignee.toLowerCase()} ${isLocked?'locked':''} ${isTransferPending?'transfer-pending':''}">
                 ${isTransferPending ? item.assignee + '➔' + item.transferTo : item.assignee}
             </button>
@@ -399,11 +404,16 @@
           li.querySelector(".status-select").onchange = (e) => { item.status = e.target.value; save(); };
           li.querySelector(".assignee").onclick = () => handleTransfer(item);
 
+          if (item.freq !== 'daily') {
+              li.querySelector(".star-btn").onclick = () => {
+                  item.wildcard = !item.wildcard;
+                  save();
+              };
+          }
+
           if (item.isManual) {
               li.querySelector(".del-btn").onclick = () => {
                   state.assignments[day] = state.assignments[day].filter(x => x.id !== item.id);
-                  // We don't reset lastOccurrence here because that would make it "Due Now" immediately.
-                  // If user wants it back in Not Due properly, they just reassign.
                   save();
               };
           }
@@ -449,7 +459,7 @@
         const nextSnap = await get(ref(db, "board/week" + nextW));
         let nextState = nextSnap.val();
         if (!nextState) nextState = generateWeek(nextW, state);
-        nextState.assignments[day].push({ ...item, status: "pending", transferTo: null, transferInitiator: null });
+        nextState.assignments[day].push({ ...item, status: "pending", wildcard: false, transferTo: null, transferInitiator: null });
         await set(ref(db, "board/week" + nextW), nextState);
         state.assignments[day] = state.assignments[day].filter(x => x.id !== item.id);
         save();
@@ -464,7 +474,7 @@
       all.forEach(t => {
           const wait = getWeeksUntil(t, displayedWeek);
           const data = { task: t, wait, isActive: activeIds.has(t.id) };
-          if (wait === 1) groups.next.push(data);
+          if (wait <= 1) groups.next.push(data);
           else if (wait === 2) groups.two.push(data);
           else groups.far.push(data);
       });
@@ -473,7 +483,7 @@
       const createGroup = (title, list) => {
           if (list.length === 0) return;
           const g = document.createElement("div"); g.className = "na-group";
-          g.innerHTML = `<div class="na-group-header"><div class="na-group-title">${title}</div><span>▼</span></div><div class="na-group-content"></div>`;
+          g.innerHTML = `<div class="na-group-header"><div class="na-group-title">${title} (${list.length})</div><span>▼</span></div><div class="na-group-content"></div>`;
           g.querySelector(".na-group-header").onclick = () => g.classList.toggle("collapsed");
           const content = g.querySelector(".na-group-content");
           list.forEach(entry => {
@@ -490,13 +500,14 @@
           });
           naCard.appendChild(g);
       };
-      createGroup("Due Next Week", groups.next);
+      createGroup("Due Now / Next Week", groups.next);
       createGroup("Due in 2 Weeks", groups.two);
       createGroup("3 Weeks or Later", groups.far);
       board.appendChild(naCard);
     }
 
     function injectTask(t) {
+        if (!state.assignments["Nedjelja"]) state.assignments["Nedjelja"] = [];
         state.assignments["Nedjelja"].push({ id: t.id+"_"+Date.now(), taskId: t.id, name: t.name, freq: t.freq, assignee: activeProfile || "Amy", status: "pending", wildcard: false, isManual: true });
         save();
     }
@@ -505,7 +516,6 @@
       const editor = document.getElementById("taskListEditor"); editor.innerHTML = "";
       const freqs = ["daily", "2x weekly", "3x weekly", "weekly", "biweekly", "monthly", "quarterly"];
 
-      // Process Built-in Overrides
       DEFAULT_BUILT_IN.forEach(t => {
         const stored = (settings.taskOverrides || {})[t.id] || {};
         const row = document.createElement("div"); row.className = "set-row";
@@ -519,6 +529,7 @@
         freqs.forEach(f => { const opt = document.createElement("option"); opt.value = f; opt.textContent = f; if(f === (stored.freq || t.freq)) opt.selected = true; fSel.appendChild(opt); });
 
         const saveChanges = () => {
+            if(!settings.taskOverrides[t.id]) settings.taskOverrides[t.id] = {};
             settings.taskOverrides[t.id] = { name: row.querySelector(".name-edit").value, points: row.querySelector(".pts-edit").value, freq: fSel.value };
             update(ref(db, "settings"), { taskOverrides: settings.taskOverrides });
         };
@@ -527,7 +538,6 @@
         editor.appendChild(row);
       });
 
-      // Process Custom Tasks
       (settings.customTasks || []).forEach((t, i) => {
           const row = document.createElement("div"); row.className = "set-row";
           row.innerHTML = `
@@ -588,7 +598,7 @@
     document.getElementById("prevWeek").onclick = () => { displayedWeek--; loadWeek(displayedWeek); };
     document.getElementById("nextWeek").onclick = () => { displayedWeek++; loadWeek(displayedWeek); };
     document.getElementById("reassign").onclick = async () => {
-        if(confirm("Reassign? This restores incomplete tasks to original users.")) {
+        if(confirm("Reassign week?")) {
             const prev = await get(ref(db, "board/week" + (displayedWeek-1)));
             state = generateWeek(displayedWeek, prev.val());
             save();
