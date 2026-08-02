@@ -451,6 +451,9 @@
     function handleTransfer(item) {
         const other = item.assignee === "Amy" ? "Aiden" : "Amy";
         if (!item.transferTo) {
+            if (activeProfile !== item.assignee) {
+                return alert(`You can only initiate transfers for chores assigned to you! (${item.assignee}'s task)`);
+            }
             if (confirm(`Request transfer to ${other}?`)) { item.transferTo = other; item.transferInitiator = activeProfile; save(); }
         } else {
             if (activeProfile === item.transferInitiator) {
