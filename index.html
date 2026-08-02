@@ -23,7 +23,22 @@
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
     }
-    h1 { font-size: 1.2rem; }
+    h1 { font-size: 1.1rem; }
+
+    .profile-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border);
+      padding: 6px 12px; border-radius: 999px; margin-bottom: 12px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .profile-label { font-size: 0.7rem; font-weight: bold; color: var(--muted); text-transform: uppercase; }
+    .profile-opt {
+      font-size: 0.75rem; padding: 4px 12px; border-radius: 999px;
+      cursor: pointer; border: 1px solid var(--border); background: #f1f5f9; color: var(--muted);
+    }
+    .profile-opt.active.amy { background: var(--amy); color: #fff; border-color: var(--amy); }
+    .profile-opt.active.aiden { background: var(--aiden); color: #fff; border-color: var(--aiden); }
+
     .status { font-size: 0.7rem; padding: 4px 8px; border-radius: 999px; }
     .status.on { background: #dcfce7; color: #166534; }
     .status.off { background: #fee2e2; color: #991b1b; }
@@ -49,21 +64,10 @@
     .reward-msg.active { display: block; }
 
     .filter-bar { display: flex; background: #e2e8f0; padding: 3px; border-radius: 10px; margin-bottom: 12px; }
-    .filter-btn {
-      flex: 1; border: none; padding: 8px; font-size: 0.85rem; border-radius: 8px;
-      background: transparent; color: var(--muted); cursor: pointer;
-    }
+    .filter-btn { flex: 1; border: none; padding: 8px; font-size: 0.85rem; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
     .filter-btn.active { background: white; color: var(--text); box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-weight: bold; }
     .filter-btn.active.amy { color: var(--amy); }
     .filter-btn.active.aiden { color: var(--aiden); }
-
-    .controls { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    button:not(.assignee):not(.pass-btn):not(.filter-btn):not(.star-btn):not(.push-btn):not(.undo-btn):not(.status-select):not(.activate-btn):not(.del-btn):not(.day-select) {
-      font-family: inherit; font-size: 0.85rem; padding: 8px 12px;
-      border: 1px solid var(--border); border-radius: 8px;
-      background: var(--card); color: var(--text); cursor: pointer;
-    }
-    button.primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
 
     .board { display: grid; gap: 12px; }
     .day-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; position: relative; transition: all 0.2s ease; }
@@ -73,12 +77,10 @@
     .day-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 8px; user-select: none; }
     .day-title { display: flex; align-items: center; gap: 6px; font-size: 1rem; font-weight: bold; }
     .day-star { color: #f59e0b; font-size: 1rem; padding: 2px 6px; border-radius: 4px; }
-    .day-star:active { background: #fef3c7; }
     .toggle-icon { font-size: 0.8rem; color: var(--muted); transition: transform 0.2s ease; }
 
     .day-card.collapsed .day-content { display: none; }
     .day-card.collapsed .toggle-icon { transform: rotate(-90deg); }
-    .day-card.collapsed { padding-bottom: 10px; }
 
     ul { list-style: none; }
     li { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
@@ -89,10 +91,12 @@
     .status-notApplicable .task-name { color: #7c3aed; font-style: italic; text-decoration: line-through; }
 
     .task-name { flex: 1; min-width: 120px; font-size: 0.9rem; }
-    .assignee { font-size: 0.75rem; padding: 4px 10px; border-radius: 999px; color: #fff; cursor: pointer; border: none; font-weight: bold; }
+    .assignee { font-size: 0.7rem; padding: 6px 12px; border-radius: 999px; color: #fff; cursor: pointer; border: none; font-weight: bold; transition: all 0.2s ease; }
     .assignee.amy { background: var(--amy); }
     .assignee.aiden { background: var(--aiden); }
-    .assignee.locked { opacity: 0.6; cursor: not-allowed; }
+    .assignee.transfer-pending { background: #6366f1; border: 2px dashed #fff; box-shadow: 0 0 0 2px #6366f1; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+    .assignee.locked { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
 
     .status-select { font-size: 0.75rem; padding: 5px; border-radius: 6px; border: 1px solid var(--border); min-width: 92px; background: #fff; cursor: pointer; }
     .freq-tag { font-size: 0.65rem; color: var(--muted); background: var(--bg); padding: 2px 6px; border-radius: 4px; }
@@ -104,7 +108,6 @@
 
     .star-btn { font-size: 1.1rem; background: none; border: none; cursor: pointer; opacity: 0.3; padding: 0 4px; filter: grayscale(1); }
     .star-btn.active { opacity: 1; filter: grayscale(0); }
-    .star-btn:disabled { opacity: 0.05; cursor: not-allowed; }
 
     .push-btn { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; }
 
@@ -119,7 +122,7 @@
     .na-group.collapsed .na-toggle-icon { transform: rotate(-90deg); }
 
     .na-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-    .na-item:last-child { border-bottom: none; }
+    .na-item.is-active-now .na-text { text-decoration: line-through; opacity: 0.5; color: var(--muted); }
     .na-text { font-size: 0.85rem; color: var(--text); font-weight: 500; }
     .na-freq-info { font-size: 0.7rem; color: var(--muted); display: block; }
     .wait-badge { font-size: 0.65rem; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-left: 5px; color: var(--muted); }
@@ -129,8 +132,6 @@
     .set-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
     .task-manager { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; }
-    .add-task-form { display: grid; gap: 10px; background: #f1f5f9; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
-    .del-btn { color: #dc2626; border: 1px solid #dc2626; background: #fef2f2; font-weight: bold; cursor: pointer; padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; }
     .pts-input { width: 55px; text-align: center; }
     .set-edit-box { display: flex; flex-direction: column; gap: 6px; flex: 1; }
   </style>
@@ -145,6 +146,12 @@
   </header>
 
   <div id="mainView">
+    <div class="profile-bar">
+        <span class="profile-label">Current Device:</span>
+        <div class="profile-opt amy" data-user="Amy">Amy</div>
+        <div class="profile-opt aiden" data-user="Aiden">Aiden</div>
+    </div>
+
     <div class="nav-container">
       <div class="week-nav">
         <button id="prevWeek">◀</button>
@@ -193,35 +200,15 @@
         <input type="number" id="goalInput" value="100" style="width: 70px;">
       </div>
     </div>
-
     <div class="set-card task-manager">
       <h2>Manage Tasks & Frequencies</h2>
-      <div class="add-task-form">
-        <input type="text" id="newTaskName" placeholder="Task Name">
-        <div style="display:flex; gap:8px;">
-            <select id="newTaskFreq" style="flex:1;">
-                <option value="daily">Daily</option>
-                <option value="2x weekly">2x Weekly</option>
-                <option value="3x weekly">3x Weekly</option>
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Bi-Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-            </select>
-            <input type="number" id="newTaskPts" class="pts-input" placeholder="Pts" value="1">
-        </div>
-        <div style="font-size:0.75rem; color:var(--muted); display:flex; align-items:center; gap:5px;">
-            <input type="checkbox" id="addToCurrentWeek" checked> Add to current board immediately?
-        </div>
-        <button id="addTaskBtn" class="primary">Add New Task</button>
-      </div>
       <div id="taskListEditor" style="margin-top:6px;"></div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAB9wJomz2H4vD-zodOTmXbFDk_kKrFKKI",
@@ -246,6 +233,7 @@
     let currentFilter = "All";
     let collapsedDays = {};
     let naCollapsedGroups = { next: false, two: true, three: true };
+    let activeProfile = localStorage.getItem('choreUserProfile') || null;
 
     const DEFAULT_BUILT_IN = [
       { id: "d1", name: "Sudje", freq: "daily" },
@@ -278,6 +266,19 @@
       { id: "mo9", name: "Placanje racuna", freq: "monthly", days: [5] },
       { id: "q1", name: "Ciscenje odvoda", freq: "quarterly", days: [6] }
     ];
+
+    function setupProfileSelector() {
+        document.querySelectorAll('.profile-opt').forEach(opt => {
+            if (opt.dataset.user === activeProfile) opt.classList.add('active');
+            opt.onclick = () => {
+                document.querySelectorAll('.profile-opt').forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+                activeProfile = opt.dataset.user;
+                localStorage.setItem('choreUserProfile', activeProfile);
+                render();
+            };
+        });
+    }
 
     function getAllTasks() {
       const builtIn = DEFAULT_BUILT_IN.map(t => {
@@ -323,37 +324,73 @@
         state = snap.val();
         document.getElementById("weekLabel").textContent = "Week " + w + (w === realWeek ? " (Today)" : "");
         if (!state && w >= realWeek) {
-          const prevSnap = await new Promise(res => onValue(ref(db, "board/week" + (w-1)), res, {onlyOnce:true}));
+          const prevSnap = await get(ref(db, "board/week" + (w-1)));
           const prevData = prevSnap.val();
-          let lastStart = "Amy";
-          if (prevData?.assignments?.["Ponedjeljak"]) lastStart = prevData.assignments["Ponedjeljak"][0]?.assignee || "Amy";
-          state = generateWeek(w, lastStart === "Amy" ? 1 : 0);
+          state = generateWeek(w, prevData);
           save();
         }
         render();
       });
     }
 
-    function generateWeek(w, forcedToggle = null) {
+    function generateWeek(w, prevWeekData = null) {
       const assignments = {};
       DAYS.forEach(d => assignments[d] = []);
-      let toggle = forcedToggle !== null ? forcedToggle : (Math.random() < 0.5 ? 0 : 1);
       const all = getAllTasks();
+
+      // Find all tasks marked "incomplete" in the previous week
+      const incompleteCarryovers = {};
+      if (prevWeekData?.assignments) {
+          Object.values(prevWeekData.assignments).forEach(dayList => {
+              dayList.forEach(item => {
+                  if (item.status === 'incomplete') {
+                      incompleteCarryovers[item.taskId] = item.assignee;
+                  }
+              });
+          });
+      }
+
+      // Determine starting toggle based on previous Monday or random
+      let toggle = Math.random() < 0.5 ? 0 : 1;
+      if (prevWeekData?.assignments?.["Ponedjeljak"]) {
+          const lastMondayAssignee = prevWeekData.assignments["Ponedjeljak"][0]?.assignee;
+          toggle = lastMondayAssignee === "Amy" ? 1 : 0;
+      }
+
+      // Generate Daily tasks
       all.filter(t => t.freq === "daily").forEach(t => {
         DAYS.forEach(day => {
           const forced = LOCKED[t.id];
-          assignments[day].push({ id: t.id+"_"+day, taskId: t.id, name: t.name, freq: t.freq, assignee: forced || ASSIGNEES[toggle], status: "pending", wildcard: false });
-          if (!forced) toggle = 1 - toggle;
+          // Rule: If incomplete last week, carry over the assignee
+          const carryOverAssignee = incompleteCarryovers[t.id];
+          const finalAssignee = forced || carryOverAssignee || ASSIGNEES[toggle];
+
+          assignments[day].push({
+              id: t.id+"_"+day, taskId: t.id, name: t.name, freq: t.freq,
+              assignee: finalAssignee, status: "pending", wildcard: false,
+              transferTo: null, transferInitiator: null
+          });
+          if (!forced && !carryOverAssignee) toggle = 1 - toggle;
         });
       });
+
+      // Generate Periodical tasks
       all.filter(t => t.freq !== "daily").forEach(t => {
         if (!appearsThisWeek(t, w)) return;
         let targetDays = t.days || [6];
         if (t.freq === "2x weekly") targetDays = [1, 4];
         if (t.freq === "3x weekly") targetDays = [1, 3, 5];
+
         targetDays.forEach(di => {
-          assignments[DAYS[di]].push({ id: t.id+"_"+di, taskId: t.id, name: t.name, freq: t.freq, assignee: ASSIGNEES[toggle], status: "pending", wildcard: false });
-          toggle = 1 - toggle;
+          const carryOverAssignee = incompleteCarryovers[t.id];
+          const finalAssignee = carryOverAssignee || ASSIGNEES[toggle];
+
+          assignments[DAYS[di]].push({
+              id: t.id+"_"+di, taskId: t.id, name: t.name, freq: t.freq,
+              assignee: finalAssignee, status: "pending", wildcard: false,
+              transferTo: null, transferInitiator: null
+          });
+          if (!carryOverAssignee) toggle = 1 - toggle;
         });
       });
       return { assignments, week: w };
@@ -416,26 +453,77 @@
         const ul = document.createElement("ul");
         items.forEach(item => {
           const status = item.status || "pending";
-          if (status === "completed" && !item.isMoved) {
+          if (status === "completed") {
             const pts = getPoints(item);
             if (item.assignee === "Amy") amyPts += pts; else aidenPts += pts;
           }
           const li = document.createElement("li");
           li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
           const isStarDisabled = ["monthly", "quarterly"].includes(item.freq.toLowerCase());
-          li.innerHTML = `<select class="status-select"><option value="pending" ${status==='pending'?'selected':''}>⏳ Pending</option><option value="completed" ${status==='completed'?'selected':''}>✅ Done</option><option value="incomplete" ${status==='incomplete'?'selected':''}>❌ Incomplete</option><option value="notApplicable" ${status==='notApplicable'?'selected':''}>➖ N/A</option></select><div class="task-name">${item.wildcard?'⭐ ':''}${item.name} <span class="freq-tag">(${item.freq})</span></div><button class="assignee ${item.assignee.toLowerCase()} ${(LOCKED[item.taskId] || item.wildcard)?'locked':''}">${item.assignee} ${(LOCKED[item.taskId] || item.wildcard)?'🔒':''}</button><div class="row-tools"><button class="star-btn ${item.wildcard?'active':''}" ${isStarDisabled ? 'disabled' : ''}>⭐</button>${item.freq!=='daily'?`<button class="push-btn">Move ⏭</button>`:''}</div>`;
+          const isTransferPending = !!item.transferTo;
+          const assigneeDisplay = isTransferPending ? `${item.assignee} ➔ ${item.transferTo}?` : item.assignee;
+
+          let isLockedForSession = !activeProfile;
+          if (activeProfile && !isTransferPending && activeProfile !== item.assignee) isLockedForSession = true;
+          if (activeProfile && isTransferPending && activeProfile !== item.transferTo && activeProfile !== item.transferInitiator) isLockedForSession = true;
+
+          li.innerHTML = `
+            <select class="status-select">
+                <option value="pending" ${status==='pending'?'selected':''}>⏳ Pending</option>
+                <option value="completed" ${status==='completed'?'selected':''}>✅ Done</option>
+                <option value="incomplete" ${status==='incomplete'?'selected':''}>❌ Incomplete</option>
+                <option value="notApplicable" ${status==='notApplicable'?'selected':''}>➖ N/A</option>
+            </select>
+            <div class="task-name">${item.wildcard?'⭐ ':''}${item.name} <span class="freq-tag">(${item.freq})</span></div>
+            <button class="assignee ${item.assignee.toLowerCase()} ${(LOCKED[item.taskId] || item.wildcard || isLockedForSession)?'locked':''} ${isTransferPending ? 'transfer-pending' : ''}">
+                ${assigneeDisplay} ${(LOCKED[item.taskId] || item.wildcard)?'🔒':''}
+            </button>
+            <div class="row-tools">
+                <button class="star-btn ${item.wildcard?'active':''}" ${isStarDisabled ? 'disabled' : ''}>⭐</button>
+                ${item.freq!=='daily'?`<button class="push-btn">Move ⏭</button>`:''}
+            </div>`;
+
           li.querySelector(".status-select").onchange = (e) => { item.status = e.target.value; save(); };
+
           if (!isStarDisabled) {
             li.querySelector(".star-btn").onclick = () => {
-                let currentWildcardCount = 0;
-                Object.values(state.assignments).forEach(dayList => { dayList.forEach(t => { if(t.wildcard) currentWildcardCount++; }); });
-                if (!item.wildcard && currentWildcardCount >= 2) return alert("Maximum of 2 wildcards allowed!");
+                let count = 0;
+                Object.values(state.assignments).forEach(dayList => { dayList.forEach(t => { if(t.wildcard) count++; }); });
+                if (!item.wildcard && count >= 2) return alert("Maximum of 2 wildcards allowed!");
                 item.wildcard = !item.wildcard;
                 save();
             };
           }
+
           const badge = li.querySelector(".assignee");
-          if (!badge.classList.contains("locked")) { badge.onclick = () => { item.assignee = item.assignee === "Amy" ? "Aiden" : "Amy"; save(); }; }
+          if (!badge.classList.contains("locked")) {
+            badge.onclick = () => {
+                const other = item.assignee === "Amy" ? "Aiden" : "Amy";
+                if (!item.transferTo) {
+                    if (confirm(`Initiate transfer of "${item.name}" to ${other}?`)) {
+                        item.transferTo = other;
+                        item.transferInitiator = activeProfile;
+                        save();
+                    }
+                } else {
+                    if (activeProfile === item.transferInitiator) {
+                        if (confirm(`Cancel transfer request?`)) {
+                            item.transferTo = null;
+                            item.transferInitiator = null;
+                            save();
+                        }
+                    } else if (activeProfile === item.transferTo) {
+                        if (confirm(`Accept transfer of "${item.name}"?`)) {
+                            item.assignee = item.transferTo;
+                            item.transferTo = null;
+                            item.transferInitiator = null;
+                            save();
+                        }
+                    }
+                }
+            };
+          }
+
           if (item.freq !== 'daily') {
              const tools = li.querySelector(".row-tools");
              const sel = document.createElement("select");
@@ -467,11 +555,11 @@
 
     async function moveTaskToNextWeek(item, day) {
         const nextW = displayedWeek + 1;
-        const nextSnap = await new Promise(res => onValue(ref(db, "board/week" + nextW), res, {onlyOnce:true}));
+        const nextSnap = await get(ref(db, "board/week" + nextW));
         let nextState = nextSnap.val();
-        if (!nextState) nextState = generateWeek(nextW, item.assignee === "Amy" ? 1 : 0);
+        if (!nextState) nextState = generateWeek(nextW, state);
         if (!nextState.assignments[day]) nextState.assignments[day] = [];
-        nextState.assignments[day].push({ ...item, id: item.taskId+"_moved_"+Date.now(), status: "pending", wildcard: false });
+        nextState.assignments[day].push({ ...item, id: item.taskId+"_moved_"+Date.now(), status: "pending", wildcard: false, transferTo: null, transferInitiator: null });
         await set(ref(db, "board/week" + nextW), nextState);
         state.assignments[day] = state.assignments[day].filter(x => x.id !== item.id);
         save();
@@ -481,10 +569,16 @@
       const activeIds = new Set();
       Object.values(state.assignments).forEach(dayList => { dayList.forEach(item => activeIds.add(item.taskId)); });
       const all = getAllTasks();
-      const notDueMaster = all.filter(t => t.freq.toLowerCase() !== 'daily' && !activeIds.has(t.id) && !appearsThisWeek(t, displayedWeek));
+      const notDueMaster = all.filter(t => t.freq.toLowerCase() !== 'daily');
       if (!notDueMaster.length) return;
       const groups = { next: [], two: [], three: [] };
-      notDueMaster.forEach(t => { const wait = getWeeksUntil(t, displayedWeek); if (wait === 1) groups.next.push({ task: t, wait }); else if (wait === 2) groups.two.push({ task: t, wait }); else groups.three.push({ task: t, wait }); });
+      notDueMaster.forEach(t => {
+          const wait = getWeeksUntil(t, displayedWeek);
+          const data = { task: t, wait, isActiveNow: activeIds.has(t.id) };
+          if (wait === 1) groups.next.push(data);
+          else if (wait === 2) groups.two.push(data);
+          else groups.three.push(data);
+      });
       const card = document.createElement("div"); card.className = "na-card"; card.innerHTML = `<h2>Not Due This Week</h2>`;
       const createGroup = (id, title, list) => {
           if (!list.length) return;
@@ -496,9 +590,10 @@
           list.forEach(entry => {
               const t = entry.task;
               const div = document.createElement("div");
-              div.className = "na-item";
-              div.innerHTML = `<div><span class="na-text">${t.name} <span class="wait-badge">(In ${entry.wait} week${entry.wait > 1 ? 's' : ''})</span></span><span class="na-freq-info">${t.freq}</span></div><button class="activate-btn">Activate +</button>`;
-              div.querySelector("button").onclick = () => injectTaskIntoCurrentBoard(t, "Nedjelja");
+              div.className = "na-item" + (entry.isActiveNow ? " is-active-now" : "");
+              const btn = entry.isActiveNow ? '' : `<button class="activate-btn">Activate +</button>`;
+              div.innerHTML = `<div><span class="na-text">${t.name} <span class="wait-badge">(In ${entry.wait} week${entry.wait > 1 ? 's' : ''})</span></span><span class="na-freq-info">${t.freq}</span></div>${btn}`;
+              if (!entry.isActiveNow) div.querySelector("button").onclick = () => injectTaskIntoCurrentBoard(t, "Nedjelja");
               content.appendChild(div);
           });
           card.appendChild(g);
@@ -511,7 +606,7 @@
 
     function injectTaskIntoCurrentBoard(taskObj, dayName) {
         if (!state.assignments[dayName]) state.assignments[dayName] = [];
-        const instance = { id: taskObj.id + "_" + Date.now(), taskId: taskObj.id, name: taskObj.name, freq: taskObj.freq, assignee: "Amy", status: "pending", wildcard: false };
+        const instance = { id: taskObj.id + "_" + Date.now(), taskId: taskObj.id, name: taskObj.name, freq: taskObj.freq, assignee: activeProfile || "Amy", status: "pending", wildcard: false, transferTo: null, transferInitiator: null };
         state.assignments[dayName].push(instance);
         save();
     }
@@ -543,31 +638,8 @@
         topRow.querySelectorAll("input").forEach(i => i.onchange = () => { settings.taskOverrides[t.id] = { name: topRow.querySelector('input[type="text"]').value, points: topRow.querySelector('input[type="number"]').value, freq: fSel.value }; set(ref(db, "settings"), settings); });
         edit.appendChild(row);
       });
-      (settings.customTasks || []).forEach((t, i) => {
-        const row = document.createElement("div"); row.className = "set-row";
-        const editBox = document.createElement("div"); editBox.className = "set-edit-box";
-        const topRow = document.createElement("div"); topRow.style.display = "flex"; topRow.style.gap = "8px";
-        topRow.innerHTML = `<input type="text" value="${t.name}" style="flex:1;"><input type="number" class="pts-input" value="${t.points}">`;
-        const bottomRow = document.createElement("div"); bottomRow.style.display = "flex"; bottomRow.style.gap = "8px";
-        const fSel = createFreqSelect(t.freq, (v) => { settings.customTasks[i].freq = v; set(ref(db, "settings"), settings); });
-        fSel.style.flex = "1";
-        const addBtn = document.createElement("button"); addBtn.className = "activate-btn"; addBtn.textContent = "Add Now"; addBtn.onclick = () => injectTaskIntoCurrentBoard(t, DAYS[todayIndex]);
-        const delBtn = document.createElement("button"); delBtn.className = "del-btn"; delBtn.textContent = "DEL"; delBtn.onclick = () => { settings.customTasks.splice(i,1); set(ref(db, "settings"), settings); };
-        bottomRow.appendChild(fSel); bottomRow.appendChild(addBtn); bottomRow.appendChild(delBtn);
-        editBox.appendChild(topRow); editBox.appendChild(bottomRow); row.appendChild(editBox);
-        topRow.querySelectorAll("input").forEach(inp => inp.onchange = () => { settings.customTasks[i].name = topRow.querySelector('input[type="text"]').value; settings.customTasks[i].points = topRow.querySelector('input[type="number"]').value; set(ref(db, "settings"), settings); });
-        edit.appendChild(row);
-      });
     }
 
-    document.getElementById("addTaskBtn").onclick = () => {
-      const nameEl = document.getElementById("newTaskName"); const ptsEl = document.getElementById("newTaskPts"); const freqEl = document.getElementById("newTaskFreq"); const injectEl = document.getElementById("addToCurrentWeek");
-      if (!nameEl.value) return;
-      const newTask = { id: "cust_"+Date.now(), name: nameEl.value, freq: freqEl.value, points: ptsEl.value };
-      settings.customTasks = settings.customTasks || []; settings.customTasks.push(newTask);
-      if (injectEl.checked) injectTaskIntoCurrentBoard(newTask, DAYS[todayIndex]);
-      set(ref(db, "settings"), settings); nameEl.value = "";
-    };
     document.getElementById("viewToggle").onclick = () => { document.getElementById("mainView").classList.toggle("hidden"); document.getElementById("settingsView").classList.toggle("hidden"); };
     document.getElementById("todayBtn").onclick = () => { displayedWeek = realWeek; loadWeek(displayedWeek); setTimeout(() => { const card = document.querySelector(".day-card.today"); if(card){ card.classList.remove("collapsed"); card.scrollIntoView({ behavior:'smooth', block:'start' }); } }, 200); };
     document.getElementById("wildcardBtn").onclick = () => {
@@ -583,7 +655,14 @@
     document.getElementById("goalInput").onchange = (e) => { settings.goal = parseInt(e.target.value); set(ref(db, "settings"), settings); };
     document.getElementById("prevWeek").onclick = () => { displayedWeek--; loadWeek(displayedWeek); };
     document.getElementById("nextWeek").onclick = () => { displayedWeek++; loadWeek(displayedWeek); };
-    document.getElementById("reassign").onclick = () => { if(confirm("Reassign week?")) { state = generateWeek(displayedWeek); save(); } };
+    document.getElementById("reassign").onclick = async () => {
+        if(confirm("Reassign week? This will force 'Incomplete' tasks back to original users.")) {
+            const prevSnap = await get(ref(db, "board/week" + (displayedWeek-1)));
+            state = generateWeek(displayedWeek, prevSnap.val());
+            save();
+        }
+    };
+    setupProfileSelector();
     loadWeek(displayedWeek);
   </script>
 </body>
