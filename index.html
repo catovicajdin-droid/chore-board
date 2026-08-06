@@ -398,7 +398,6 @@
           const li = document.createElement("li");
           li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
           const isTransferPending = !!item.transferTo;
-          const isLocked = !activeProfile || (isTransferPending && activeProfile !== item.transferTo && activeProfile !== item.transferInitiator) || (!isTransferPending && activeProfile !== item.assignee && !item.transferTo);
 
           li.innerHTML = `
             <select class="status-select">
@@ -459,38 +458,37 @@
 
     function handleTransfer(item) {
         const other = item.assignee === "Amy" ? "Aiden" : "Amy";
-        if (!item.transferTo) {
-            // No transfer active
-            if (activeProfile === item.assignee) {
-                // I am the assignee: Immediate swap
-                if (confirm(`Directly change assignee to ${other}?`)) {
-                    item.assignee = other;
-                    save();
-                }
-            } else {
-                // I am NOT the assignee: Request a transfer
+
+        // CASE 1: I AM THE OWNER
+        if (activeProfile === item.assignee) {
+            if (confirm(`Directly change assignee to ${other}?`)) {
+                item.assignee = other;
+                item.transferTo = null; // Clear any pending requests
+                item.transferInitiator = null;
+                save();
+            }
+        }
+        // CASE 2: I AM NOT THE OWNER
+        else {
+            if (!item.transferTo) {
+                // No request active: Start one
                 if (confirm(`Request this chore from ${item.assignee}?`)) {
                     item.transferTo = activeProfile;
                     item.transferInitiator = activeProfile;
                     save();
                 }
-            }
-        } else {
-            // Transfer is ALREADY active
-            if (activeProfile === item.transferInitiator) {
-                // I asked for it: I can cancel
-                if (confirm(`Cancel your transfer request?`)) {
-                    item.transferTo = null;
-                    item.transferInitiator = null;
-                    save();
-                }
-            } else if (activeProfile === item.assignee) {
-                // I am the owner: I can approve
-                if (confirm(`Let ${item.transferTo} take this chore?`)) {
-                    item.assignee = item.transferTo;
-                    item.transferTo = null;
-                    item.transferInitiator = null;
-                    save();
+            } else {
+                // Request already active
+                if (activeProfile === item.transferInitiator) {
+                    // I am the one who requested it: Cancel it
+                    if (confirm(`Cancel your transfer request?`)) {
+                        item.transferTo = null;
+                        item.transferInitiator = null;
+                        save();
+                    }
+                } else {
+                    // Someone else requested it and I am not the owner: Do nothing
+                    alert(`This task is currently being requested by ${item.transferTo}. Only the owner (${item.assignee}) can approve.`);
                 }
             }
         }
