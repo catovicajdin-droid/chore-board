@@ -47,7 +47,7 @@
     .score-value { font-size: 1.4rem; font-weight: bold; }
     .score-value.amy { color: var(--amy); }
     .score-value.aiden { color: var(--aiden); }
-    .progress-bg { background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 8px; }
+    .progress-bg { background: #e2e8f0; height: 100%; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 8px; }
     .progress-fill { background: #22c55e; height: 100%; transition: width 0.4s ease; width: 0%; }
 
     .filter-bar { display: flex; background: #e2e8f0; padding: 3px; border-radius: 10px; margin-bottom: 12px; }
@@ -83,7 +83,6 @@
     .assignee.amy { background: var(--amy); }
     .assignee.aiden { background: var(--aiden); }
     .assignee.transfer-pending { background: #6366f1; border: 2px dashed #fff; animation: pulse 1.5s infinite; }
-    .assignee.locked { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
 
     .status-select { font-size: 0.75rem; padding: 5px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; }
     .row-tools { display: flex; gap: 8px; align-items: center; width: 100%; margin-top: 6px; }
@@ -337,7 +336,7 @@
       all.forEach(t => {
         const interval = FREQ_INTERVALS[t.freq] || 0;
         const lastW = lastOccurrence[t.id];
-        const shouldAppear = (t.freq === 'daily') || (lastW === undefined) || (w - lastW >= interval);
+        const shouldAppear = (t.freq === 'daily') || (lastW === undefined) || (w - lastW >= interval) || (lastW === w);
 
         if (shouldAppear) {
           const targetDays = (t.freq === '2x weekly') ? [1, 4] : (t.freq === '3x weekly' ? [1, 3, 5] : (t.freq === 'daily' ? [0,1,2,3,4,5,6] : [6]));
@@ -458,37 +457,30 @@
 
     function handleTransfer(item) {
         const other = item.assignee === "Amy" ? "Aiden" : "Amy";
-
-        // CASE 1: I AM THE OWNER
         if (activeProfile === item.assignee) {
-            if (confirm(`Directly change assignee to ${other}?`)) {
+            if (confirm(`Change assignee to ${other}?`)) {
                 item.assignee = other;
-                item.transferTo = null; // Clear any pending requests
+                item.transferTo = null;
                 item.transferInitiator = null;
                 save();
             }
         }
-        // CASE 2: I AM NOT THE OWNER
         else {
             if (!item.transferTo) {
-                // No request active: Start one
                 if (confirm(`Request this chore from ${item.assignee}?`)) {
                     item.transferTo = activeProfile;
                     item.transferInitiator = activeProfile;
                     save();
                 }
             } else {
-                // Request already active
                 if (activeProfile === item.transferInitiator) {
-                    // I am the one who requested it: Cancel it
                     if (confirm(`Cancel your transfer request?`)) {
                         item.transferTo = null;
                         item.transferInitiator = null;
                         save();
                     }
                 } else {
-                    // Someone else requested it and I am not the owner: Do nothing
-                    alert(`This task is currently being requested by ${item.transferTo}. Only the owner (${item.assignee}) can approve.`);
+                    alert(`This task is requested by ${item.transferTo}. Only the owner (${item.assignee}) can approve.`);
                 }
             }
         }
