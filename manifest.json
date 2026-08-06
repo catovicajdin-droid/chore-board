@@ -1,18 +1,13 @@
 {
-  "name": "Chore Board",
+  "name": "Chore Board Pro",
   "short_name": "Chores",
-  "start_url": "./index.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192/4f46e5/ffffff?text=C",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "https://via.placeholder.com/512/4f46e5/ffffff?text=C",
+      "src": "https://cdn-icons-png.flaticon.com/512/3063/3063822.png",
       "sizes": "512x512",
       "type": "image/png"
     }
