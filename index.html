@@ -350,7 +350,6 @@
             });
             if (!LOCKED[t.id] && !carry) toggle = 1 - toggle;
           });
-          // Update last occurrence only if we are creating this week's plan for the first time
           if (lastOccurrence[t.id] === undefined || lastOccurrence[t.id] < w) {
             lastOccurrence[t.id] = w;
           }
@@ -399,7 +398,7 @@
           const li = document.createElement("li");
           li.className = "status-" + status + (currentFilter !== "All" && item.assignee !== currentFilter ? " hidden" : "");
           const isTransferPending = !!item.transferTo;
-          const isLocked = !activeProfile || (isTransferPending && activeProfile !== item.transferTo && activeProfile !== item.transferInitiator) || (!isTransferPending && activeProfile !== item.assignee);
+          const isLocked = !activeProfile || (isTransferPending && activeProfile !== item.transferTo && activeProfile !== item.transferInitiator) || (!isTransferPending && activeProfile !== item.assignee && !item.transferTo);
 
           li.innerHTML = `
             <select class="status-select">
@@ -410,7 +409,7 @@
             </select>
             <div class="task-name">${item.wildcard?'⭐ ':''}${item.name}</div>
             ${item.freq !== 'daily' ? `<button class="star-btn ${item.wildcard?'active':''}">⭐</button>` : ''}
-            <button class="assignee ${item.assignee.toLowerCase()} ${isLocked?'locked':''} ${isTransferPending?'transfer-pending':''}">
+            <button class="assignee ${item.assignee.toLowerCase()} ${isTransferPending?'transfer-pending':''}">
                 ${isTransferPending ? item.assignee + '➔' + item.transferTo : item.assignee}
             </button>
             <div class="row-tools">
@@ -461,15 +460,38 @@
     function handleTransfer(item) {
         const other = item.assignee === "Amy" ? "Aiden" : "Amy";
         if (!item.transferTo) {
-            if (activeProfile !== item.assignee) {
-                return alert(`You can only initiate transfers for chores assigned to you! (${item.assignee}'s task)`);
+            // No transfer active
+            if (activeProfile === item.assignee) {
+                // I am the assignee: Immediate swap
+                if (confirm(`Directly change assignee to ${other}?`)) {
+                    item.assignee = other;
+                    save();
+                }
+            } else {
+                // I am NOT the assignee: Request a transfer
+                if (confirm(`Request this chore from ${item.assignee}?`)) {
+                    item.transferTo = activeProfile;
+                    item.transferInitiator = activeProfile;
+                    save();
+                }
             }
-            if (confirm(`Request transfer to ${other}?`)) { item.transferTo = other; item.transferInitiator = activeProfile; save(); }
         } else {
+            // Transfer is ALREADY active
             if (activeProfile === item.transferInitiator) {
-                if (confirm(`Cancel your transfer request?`)) { item.transferTo = null; item.transferInitiator = null; save(); }
-            } else if (activeProfile === item.transferTo) {
-                if (confirm(`Accept transfer of "${item.name}"?`)) { item.assignee = item.transferTo; item.transferTo = null; item.transferInitiator = null; save(); }
+                // I asked for it: I can cancel
+                if (confirm(`Cancel your transfer request?`)) {
+                    item.transferTo = null;
+                    item.transferInitiator = null;
+                    save();
+                }
+            } else if (activeProfile === item.assignee) {
+                // I am the owner: I can approve
+                if (confirm(`Let ${item.transferTo} take this chore?`)) {
+                    item.assignee = item.transferTo;
+                    item.transferTo = null;
+                    item.transferInitiator = null;
+                    save();
+                }
             }
         }
     }
@@ -527,7 +549,7 @@
     }
 
     function injectTask(t) {
-        const targetDays = (t.freq === '2x weekly') ? [1, 4] : (t.freq === '3x weekly' ? [1, 3, 5] : [6]); // Default to Sunday if not 2x/3x
+        const targetDays = (t.freq === '2x weekly') ? [1, 4] : (t.freq === '3x weekly' ? [1, 3, 5] : [6]);
         targetDays.forEach(di => {
             const dayName = DAYS[di];
             if (!state.assignments[dayName]) state.assignments[dayName] = [];
