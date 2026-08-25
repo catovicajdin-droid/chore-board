@@ -545,8 +545,9 @@
 
       all.forEach(t => {
           const wait = getWeeksUntil(t, displayedWeek);
-          const data = { task: t, wait, isActive: activeIds.has(t.id) };
-          if (wait <= 1) groups.next.push(data);
+          const isActive = activeIds.has(t.id);
+          const data = { task: t, wait, isActive };
+          if (isActive || wait <= 1) groups.next.push(data);
           else if (wait === 2) groups.two.push(data);
           else groups.far.push(data);
       });
@@ -560,7 +561,8 @@
           const content = g.querySelector(".na-group-content");
           list.forEach(entry => {
               const div = document.createElement("div"); div.className = "na-item" + (entry.isActive ? " is-active" : "");
-              div.innerHTML = `<div><div style="font-size:0.8rem; font-weight:700;">${escapeHtml(entry.task.name)}</div><div style="font-size:0.6rem; color:var(--muted);">${entry.task.freq} (Wait: ${entry.wait}w)</div></div>
+              const waitLabel = entry.isActive ? "Due now" : `Wait: ${entry.wait}w`;
+              div.innerHTML = `<div><div style="font-size:0.8rem; font-weight:700;">${escapeHtml(entry.task.name)}</div><div style="font-size:0.6rem; color:var(--muted);">${entry.task.freq} (${waitLabel})</div></div>
                 ${entry.isActive ? '' : '<button class="activate-btn">Activate +</button>'}`;
               if (!entry.isActive) div.querySelector("button").onclick = () => {
                   injectTask(entry.task);
