@@ -287,24 +287,45 @@
       return ptsMap[item.freq] || 1;
     }
 
+    // ISO week-of-year (1-53), matching the numbering already used for board/weekN
+    // keys in Firebase. It resets every January, so any math that subtracts two
+    // of these numbers directly breaks across a year boundary - see weeksBetween().
+    function getWeekNumber(d) {
+      const date = new Date(d.getTime());
+      date.setHours(0,0,0,0);
+      date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+      const week1 = new Date(date.getFullYear(), 0, 4);
+      return 1 + Math.round(((date - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+    }
+
+    function isoWeekMonday(year, week) {
+      const jan4 = new Date(year, 0, 4);
+      const jan4Day = (jan4.getDay() + 6) % 7;
+      const week1Monday = new Date(jan4.getFullYear(), jan4.getMonth(), jan4.getDate() - jan4Day);
+      return new Date(week1Monday.getTime() + (week - 1) * 604800000);
+    }
+
+    function isValidIsoWeek(w) { return Number.isFinite(w) && w >= 1 && w <= 53; }
+
+    // A bare ISO week number repeats every year, so resolve it to whichever
+    // year's occurrence lands closest to referenceDate before doing date math.
+    function getWeekStartDate(w, referenceDate = new Date()) {
+      const refYear = referenceDate.getFullYear();
+      const candidates = [refYear - 1, refYear, refYear + 1].map(y => isoWeekMonday(y, w));
+      candidates.sort((a, b) => Math.abs(a - referenceDate) - Math.abs(b - referenceDate));
+      return candidates[0];
+    }
+
+    function weeksBetween(w1, w2, referenceDate = new Date()) {
+      return Math.round((getWeekStartDate(w1, referenceDate) - getWeekStartDate(w2, referenceDate)) / 604800000);
+    }
+
     function getWeeksUntil(t, currentW) {
         const interval = FREQ_INTERVALS[t.freq] || 0;
         const lastW = (settings.lastOccurrence || {})[t.id];
-        if (lastW === undefined) return 0;
-        const wait = interval - (currentW - lastW);
+        if (lastW === undefined || !isValidIsoWeek(lastW)) return 0;
+        const wait = interval - weeksBetween(currentW, lastW);
         return wait > 0 ? wait : 0;
-    }
-
-    const WEEK_EPOCH = new Date(2020, 0, 6); // a Monday; fixed reference point, never resets
-
-    function getWeekNumber(d) {
-      const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      date.setDate(date.getDate() - ((date.getDay() + 6) % 7)); // Monday of this week
-      return Math.round((date - WEEK_EPOCH) / 604800000);
-    }
-
-    function getWeekStartDate(w) {
-      return new Date(WEEK_EPOCH.getTime() + w * 604800000);
     }
 
     let realWeek = getWeekNumber(new Date());
@@ -370,8 +391,8 @@
 
       all.forEach(t => {
         const interval = FREQ_INTERVALS[t.freq] || 0;
-        const lastW = lastOccurrence[t.id];
-        const shouldAppear = (t.freq === 'daily') || (lastW === undefined) || (w - lastW >= interval) || (lastW === w);
+        const lastW = isValidIsoWeek(lastOccurrence[t.id]) ? lastOccurrence[t.id] : undefined;
+        const shouldAppear = (t.freq === 'daily') || (lastW === undefined) || (weeksBetween(w, lastW) >= interval) || (lastW === w);
 
         if (shouldAppear) {
           const targetDays = getTargetDays(t.freq);
@@ -384,7 +405,7 @@
             });
             if (!LOCKED[t.id] && !carry) toggle = 1 - toggle;
           });
-          if (lastOccurrence[t.id] === undefined || lastOccurrence[t.id] < w) {
+          if (!isValidIsoWeek(lastOccurrence[t.id]) || weeksBetween(w, lastOccurrence[t.id]) > 0) {
             lastOccurrence[t.id] = w;
           }
         }
